@@ -2,9 +2,16 @@
 // in a terminal-based UI interactively, with live preview of command results.
 package main
 
+import (
+	"io"
+	"os"
+)
+
 func main() {
-	// TODO: in background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
-	// TODO: using tcell, edit a command in bash format in multiline input box
+	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
+	go collect()
+
+	// TODO: using tcell, edit a command in bash format in multiline input box (or jroimartin/gocui?)
 	// TODO: run it automatically in bg after first " " (or ^Enter)
 	// TODO: auto-kill it on any edit
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
@@ -23,4 +30,16 @@ func main() {
 	// - show # of read lines & kbytes
 	// - show status (errorlevel) of process, or that it's still running (also with background colors)
 	// - allow copying and pasting to/from command line
+}
+
+func collect() {
+	const bufsize = 40 * 1024 * 1024 // 40 MB
+	buf := make([]byte, bufsize)
+	// TODO: read gradually what is available and show progress
+	n, err := io.ReadFull(os.Stdin, buf)
+	if err != nil && err != io.ErrUnexpectedEOF {
+		panic(err)
+	}
+	buf = buf[:n]
+	// TODO: use buf somewhere
 }
