@@ -5,11 +5,52 @@ package main
 import (
 	"io"
 	"os"
+
+	"github.com/jroimartin/gocui"
+)
+
+const (
+	queryTag = "query"
 )
 
 func main() {
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
 	go collect()
+
+	// Init TUI code
+	tui, err := gocui.NewGui(gocui.OutputNormal)
+	if err != nil {
+		panic(err)
+	}
+	defer tui.Close()
+
+	// Prepare TUI layout etc.
+	tui.SetManagerFunc(layout)
+	w, h := tui.Size()
+	query, err := tui.SetView(queryTag, 0, 0, w-1, 3)
+	if err != nil && err != gocui.ErrUnknownView {
+		panic(err)
+	}
+	query.Title = "Command"
+	query.BgColor = gocui.ColorCyan
+	query.Editable = true
+	query.Editor = gocui.DefaultEditor
+	output, err := tui.SetView(outputTag, 0, 3, w-1, h-1)
+	if err != nil && err != gocui.ErrUnknownView {
+		panic(err)
+	}
+	output.Title = "Output"
+	output.Autoscroll = true
+	err = tui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, func(*gocui.Gui, *gocui.View) error {
+		return gocui.ErrQuit
+	})
+	if err != nil {
+		panic(err)
+	}
+	err = tui.MainLoop()
+	if err != nil && err != gocui.ErrQuit {
+		panic(err)
+	}
 
 	// TODO: using tcell, edit a command in bash format in multiline input box (or jroimartin/gocui?)
 	// TODO: run it automatically in bg after first " " (or ^Enter)
