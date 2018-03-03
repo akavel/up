@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	queryTag = "query"
+	queryTag  = "query"
+	outputTag = "output"
 )
 
 func main() {
@@ -41,12 +42,13 @@ func main() {
 	}
 	output.Title = "Output"
 	output.Autoscroll = true
-	err = tui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, func(*gocui.Gui, *gocui.View) error {
+	err = tui.SetKeybinding(queryTag, gocui.KeyCtrlC, gocui.ModNone, func(*gocui.Gui, *gocui.View) error {
 		return gocui.ErrQuit
 	})
 	if err != nil {
 		panic(err)
 	}
+	tui.SetCurrentView(queryTag)
 	err = tui.MainLoop()
 	if err != nil && err != gocui.ErrQuit {
 		panic(err)
@@ -83,4 +85,9 @@ func collect() {
 	}
 	buf = buf[:n]
 	// TODO: use buf somewhere
+}
+
+func layout(tui *gocui.Gui) error {
+	// w, h := tui.Size()
+	return nil
 }
