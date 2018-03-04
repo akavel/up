@@ -35,7 +35,7 @@ func main() {
 	query.Title = "Command"
 	query.BgColor = gocui.ColorCyan
 	query.Editable = true
-	query.Editor = gocui.DefaultEditor
+	// query.Editor = gocui.DefaultEditor
 	output, err := tui.SetView(outputTag, 0, 3, w-1, h-1)
 	if err != nil && err != gocui.ErrUnknownView {
 		panic(err)
@@ -55,8 +55,9 @@ func main() {
 	}
 
 	// TODO: using tcell, edit a command in bash format in multiline input box (or jroimartin/gocui?)
-	// TODO: run it automatically in bg after first " " (or ^Enter)
-	// TODO: auto-kill it on any edit
+	//       NOTE: gocui has trouble if we capture stdin. Try butchering ("total modding") peco/peco instead.
+	// TODO: run it automatically in bg after first " " (or ^Enter), via `bash -c`
+	// TODO: auto-kill the child process on any edit
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 	// TODO: ^X - save into executable file upN.sh (with #!/bin/bash) and quit
 	// TODO: [LATER] allow increasing size of input buffer with some key
@@ -68,11 +69,15 @@ func main() {
 	// TODO: [MUCH LATER] readline-like rich editing support? and completion?
 	// TODO: [MUCH LATER] integration with fzf? and pindexis/marker?
 	// TODO: [LATER] forking and unforking pipelines
-	// TODO: [LATER] capture input of a running process
+	// TODO: [LATER] capture output of a running process (see: https://stackoverflow.com/q/19584825/98528)
 	// TODO: [LATER] richer TUI:
 	// - show # of read lines & kbytes
 	// - show status (errorlevel) of process, or that it's still running (also with background colors)
 	// - allow copying and pasting to/from command line
+	// TODO: [LATER] allow connecting external editor (become server/engine via e.g. socket)
+	// TODO: [LATER] become pluggable into http://luna-lang.org
+	// TODO: [LATER][MAYBE] allow "plugins" ("combos" - commands with default options) e.g. for Lua `lua -e`+auto-quote, etc.
+	// TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
 }
 
 func collect() {
