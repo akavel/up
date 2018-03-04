@@ -127,6 +127,11 @@ func (e *Editor) HandleKey(ev termbox.Event) bool {
 		e.insert(ev.Ch)
 		return true
 	}
+	switch ev.Key {
+	case termbox.KeySpace:
+		e.insert(' ')
+		return true
+	}
 	return false
 }
 
