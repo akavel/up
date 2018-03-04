@@ -6,8 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/gdamore/tcell"
-	"github.com/jroimartin/gocui"
+	termbox "github.com/akavel/termbox-go"
 )
 
 const (
@@ -16,39 +15,60 @@ const (
 )
 
 func main() {
+	// Init TUI code
+	err := termbox.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer termbox.Close()
+
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
 	go collect()
 
-	// Init TUI code
-	tui, err := tcell.NewScreen()
-	if err != nil {
-		panic(err)
-	}
-	err = tui.Init()
-	if err != nil {
-		panic(err)
-	}
-	defer tui.Fini()
-	// FIXME: wide rune support, combining marks, etc.
 	for x, ch := range "hello world! :)" {
-		tui.SetContent(x, 0, ch, nil, tcell.StyleDefault)
+		termbox.SetCell(x, 0, ch, termbox.ColorWhite, termbox.ColorBlack)
 	}
+	termbox.Flush()
 	for {
-		event := tui.PollEvent()
-		switch event := event.(type) {
-		case *tcell.EventError:
-			panic(event)
-		case *tcell.EventKey:
-			switch event.Key() {
-			case tcell.KeyCtrlC, tcell.KeyEsc:
+		switch ev := termbox.PollEvent(); ev.Type {
+		case termbox.EventKey:
+			switch ev.Key {
+			case termbox.KeyEsc, termbox.KeyCtrlC:
 				return
-			case tcell.KeyRune:
-				if event.Rune() == 'q' {
-					return
-				}
 			}
 		}
 	}
+
+	// // Init TUI code
+	// tui, err := tcell.NewScreen()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// err = tui.Init()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer tui.Fini()
+	// // FIXME: wide rune support, combining marks, etc.
+	// for x, ch := range "hello world! :)" {
+	// 	tui.SetContent(x, 0, ch, nil, tcell.StyleDefault)
+	// }
+	// for {
+	// 	event := tui.PollEvent()
+	// 	switch event := event.(type) {
+	// 	case *tcell.EventError:
+	// 		panic(event)
+	// 	case *tcell.EventKey:
+	// 		switch event.Key() {
+	// 		case tcell.KeyCtrlC, tcell.KeyEsc:
+	// 			return
+	// 		case tcell.KeyRune:
+	// 			if event.Rune() == 'q' {
+	// 				return
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	// tui, err := gocui.NewGui(gocui.OutputNormal)
 	// if err != nil {
@@ -125,7 +145,7 @@ func collect() {
 	// TODO: use buf somewhere
 }
 
-func layout(tui *gocui.Gui) error {
-	// w, h := tui.Size()
-	return nil
-}
+// func layout(tui *gocui.Gui) error {
+// 	// w, h := tui.Size()
+// 	return nil
+// }
