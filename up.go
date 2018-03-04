@@ -108,6 +108,7 @@ func (b *Buf) Collect(r io.Reader) {
 		b.nLock.Lock()
 		b.n += n
 		b.nLock.Unlock()
+		go termbox.Interrupt()
 		if err == io.EOF {
 			// TODO: mark work as complete
 			return
