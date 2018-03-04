@@ -3,10 +3,12 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 
 	termbox "github.com/akavel/termbox-go"
+	"github.com/mattn/go-isatty"
 )
 
 const (
@@ -15,7 +17,14 @@ const (
 )
 
 func main() {
+	// TODO: Without below block, we'd hang with no piped input (see github.com/peco/peco, mattn/gof, fzf, etc.)
+	if isatty.IsTerminal(os.Stdin.Fd()) {
+		fmt.Fprintln(os.Stderr, "error: up requires some data piped on standard input, e.g.: `echo hello world | up`")
+		os.Exit(1)
+	}
+
 	// Init TUI code
+	// TODO: maybe try gocui or tcell?
 	err := termbox.Init()
 	if err != nil {
 		panic(err)
