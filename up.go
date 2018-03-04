@@ -29,20 +29,42 @@ func main() {
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
 	go collect()
 
-	// Draw command input line
-	prompt := "| "
-	for x, ch := range prompt {
-		termbox.SetCell(x, 0, ch, termbox.ColorWhite, termbox.ColorBlue)
-	}
-	termbox.SetCursor(len(prompt), 0)
-	termbox.Flush()
+	var (
+		prompt  = []rune("| ")
+		command = []rune{}
+		cursor  = 0
+	)
 
+	// Main loop
+main_loop:
 	for {
+		// Draw command input line
+		for x, ch := range prompt {
+			termbox.SetCell(x, 0, ch, termbox.ColorWhite, termbox.ColorBlue)
+		}
+		for x, ch := range command {
+			termbox.SetCell(x+len(prompt), 0, ch, termbox.ColorWhite, termbox.ColorBlue)
+		}
+		termbox.SetCursor(len(prompt)+cursor, 0)
+		termbox.Flush()
+
+		// Handle events
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
+			if ev.Ch != 0 {
+				// insert key into command (https://github.com/golang/go/wiki/SliceTricks#insert)
+				command = append(command, 0)
+				copy(command[cursor+1:], command[cursor:])
+				command[cursor] = ev.Ch
+				cursor++
+				continue main_loop
+			}
 			switch ev.Key {
 			case termbox.KeyEsc, termbox.KeyCtrlC:
+				// quit
 				return
+			// handle command-line editing keys
+			default:
 			}
 		}
 	}
@@ -51,6 +73,7 @@ func main() {
 	//       NOTE: gocui has trouble if we capture stdin. Try butchering ("total modding") peco/peco instead.
 	// TODO: run it automatically in bg after first " " (or ^Enter), via `bash -c`
 	// TODO: auto-kill the child process on any edit
+	// TODO: allow scrolling the output preview with pgup/pgdn keys
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 	// TODO: ^X - save into executable file upN.sh (with #!/bin/bash) and quit
 	// TODO: [LATER] allow increasing size of input buffer with some key
