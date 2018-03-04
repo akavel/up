@@ -101,6 +101,8 @@ type Editor struct {
 	prompt  []rune
 	command []rune
 	cursor  int
+	// lastw is length of command on last Draw
+	lastw int
 }
 
 func NewEditor(prompt string) *Editor {
@@ -114,9 +116,14 @@ func (e *Editor) Draw(x, y int, setcursor bool) {
 	for i, ch := range e.command {
 		termbox.SetCell(x+len(e.prompt)+i, y, ch, termbox.ColorWhite, termbox.ColorBlue)
 	}
+	// clear remains of last command if needed
+	for i := len(e.command); i < e.lastw; i++ {
+		termbox.SetCell(x+len(e.prompt)+i, y, ' ', termbox.ColorDefault, termbox.ColorDefault)
+	}
 	if setcursor {
 		termbox.SetCursor(x+len(e.prompt)+e.cursor, y)
 	}
+	e.lastw = len(e.command)
 }
 
 func (e *Editor) HandleKey(ev termbox.Event) bool {
@@ -130,9 +137,23 @@ func (e *Editor) HandleKey(ev termbox.Event) bool {
 	switch ev.Key {
 	case termbox.KeySpace:
 		e.insert(' ')
-		return true
+	case termbox.KeyBackspace, termbox.KeyBackspace2:
+		// See https://github.com/nsf/termbox-go/issues/145
+		e.delete(-1)
+	case termbox.KeyDelete:
+		e.delete(0)
+	case termbox.KeyArrowLeft:
+		if e.cursor > 0 {
+			e.cursor--
+		}
+	case termbox.KeyArrowRight:
+		if e.cursor < len(e.command) {
+			e.cursor++
+		}
+	default:
+		return false
 	}
-	return false
+	return true
 }
 
 func (e *Editor) insert(ch rune) {
@@ -141,4 +162,13 @@ func (e *Editor) insert(ch rune) {
 	copy(e.command[e.cursor+1:], e.command[e.cursor:])
 	e.command[e.cursor] = ch
 	e.cursor++
+}
+
+func (e *Editor) delete(dx int) {
+	pos := e.cursor + dx
+	if pos < 0 || pos >= len(e.command) {
+		return
+	}
+	e.command = append(e.command[:pos], e.command[pos+1:]...)
+	e.cursor = pos
 }
