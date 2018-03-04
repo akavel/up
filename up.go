@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
+	"unicode/utf8"
 
 	"github.com/mattn/go-isatty"
 	termbox "github.com/nsf/termbox-go"
@@ -26,21 +28,24 @@ func main() {
 	}
 	defer termbox.Close()
 
-	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
-	go collect()
-
 	var (
 		editor = NewEditor("| ")
+		buf    = NewBuf()
 	)
+
+	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
+	go buf.Collect(os.Stdin)
 
 	// Main loop
 main_loop:
 	for {
 		// Draw command input line
 		editor.Draw(0, 0, true)
+		buf.Draw(1)
 		termbox.Flush()
 
 		// Handle events
+		// TODO: how to interject with timer events triggering refresh?
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
 			// handle command-line editing keys
@@ -84,16 +89,59 @@ main_loop:
 	// TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux; data exploration? data science?
 }
 
-func collect() {
+type Buf struct {
+	bytes []byte
+	// NOTE: n can be written only by Collect
+	n     int
+	nLock sync.Mutex
+}
+
+func NewBuf() *Buf {
 	const bufsize = 40 * 1024 * 1024 // 40 MB
-	buf := make([]byte, bufsize)
-	// TODO: read gradually what is available and show progress
-	n, err := io.ReadFull(os.Stdin, buf)
-	if err != nil && err != io.ErrUnexpectedEOF {
-		panic(err)
+	return &Buf{bytes: make([]byte, bufsize)}
+}
+
+func (b *Buf) Collect(r io.Reader) {
+	// TODO: allow stopping - take context?
+	for {
+		n, err := r.Read(b.bytes[b.n:])
+		b.nLock.Lock()
+		b.n += n
+		b.nLock.Unlock()
+		if err == io.EOF {
+			// TODO: mark work as complete
+			return
+		} else if err != nil {
+			// TODO: better handling of errors
+			panic(err)
+		}
+		if b.n == len(b.bytes) {
+			return
+		}
 	}
-	buf = buf[:n]
-	// TODO: use buf somewhere
+}
+
+func (b *Buf) Draw(y0 int) {
+	b.nLock.Lock()
+	buf := b.bytes[:b.n]
+	b.nLock.Unlock()
+	w, h := termbox.Size()
+	// TODO: handle runes properly, including their visual width
+	x, y := 0, y0
+	for len(buf) > 0 && y < h {
+		ch, sz := utf8.DecodeRune(buf)
+		if ch == '\n' {
+			// TODO: clear to the end of screen line
+			x, y = 0, y+1
+			continue
+		}
+		termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
+		buf = buf[sz:]
+		x++
+		if x > w {
+			x, y = 0, y+1
+		}
+	}
 }
 
 type Editor struct {
