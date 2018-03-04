@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/gdamore/tcell"
 	"github.com/jroimartin/gocui"
 )
 
@@ -19,40 +20,71 @@ func main() {
 	go collect()
 
 	// Init TUI code
-	tui, err := gocui.NewGui(gocui.OutputNormal)
+	tui, err := tcell.NewScreen()
 	if err != nil {
 		panic(err)
 	}
-	defer tui.Close()
+	err = tui.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer tui.Fini()
+	// FIXME: wide rune support, combining marks, etc.
+	for x, ch := range "hello world! :)" {
+		tui.SetContent(x, 0, ch, nil, tcell.StyleDefault)
+	}
+	for {
+		event := tui.PollEvent()
+		switch event := event.(type) {
+		case *tcell.EventError:
+			panic(event)
+		case *tcell.EventKey:
+			switch event.Key() {
+			case tcell.KeyCtrlC, tcell.KeyEsc:
+				return
+			case tcell.KeyRune:
+				if event.Rune() == 'q' {
+					return
+				}
+			}
+		}
+	}
+
+	// tui, err := gocui.NewGui(gocui.OutputNormal)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer tui.Close()
 
 	// Prepare TUI layout etc.
-	tui.SetManagerFunc(layout)
-	w, h := tui.Size()
-	query, err := tui.SetView(queryTag, 0, 0, w-1, 3)
-	if err != nil && err != gocui.ErrUnknownView {
-		panic(err)
-	}
-	query.Title = "Command"
-	query.BgColor = gocui.ColorCyan
-	query.Editable = true
-	// query.Editor = gocui.DefaultEditor
-	output, err := tui.SetView(outputTag, 0, 3, w-1, h-1)
-	if err != nil && err != gocui.ErrUnknownView {
-		panic(err)
-	}
-	output.Title = "Output"
-	output.Autoscroll = true
-	err = tui.SetKeybinding(queryTag, gocui.KeyCtrlC, gocui.ModNone, func(*gocui.Gui, *gocui.View) error {
-		return gocui.ErrQuit
-	})
-	if err != nil {
-		panic(err)
-	}
-	tui.SetCurrentView(queryTag)
-	err = tui.MainLoop()
-	if err != nil && err != gocui.ErrQuit {
-		panic(err)
-	}
+
+	// tui.SetManagerFunc(layout)
+	// w, h := tui.Size()
+	// query, err := tui.SetView(queryTag, 0, 0, w-1, 3)
+	// if err != nil && err != gocui.ErrUnknownView {
+	// 	panic(err)
+	// }
+	// query.Title = "Command"
+	// query.BgColor = gocui.ColorCyan
+	// query.Editable = true
+	// // query.Editor = gocui.DefaultEditor
+	// output, err := tui.SetView(outputTag, 0, 3, w-1, h-1)
+	// if err != nil && err != gocui.ErrUnknownView {
+	// 	panic(err)
+	// }
+	// output.Title = "Output"
+	// output.Autoscroll = true
+	// err = tui.SetKeybinding(queryTag, gocui.KeyCtrlC, gocui.ModNone, func(*gocui.Gui, *gocui.View) error {
+	// 	return gocui.ErrQuit
+	// })
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// tui.SetCurrentView(queryTag)
+	// err = tui.MainLoop()
+	// if err != nil && err != gocui.ErrQuit {
+	// 	panic(err)
+	// }
 
 	// TODO: using tcell, edit a command in bash format in multiline input box (or jroimartin/gocui?)
 	//       NOTE: gocui has trouble if we capture stdin. Try butchering ("total modding") peco/peco instead.
