@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 
-	termbox "github.com/akavel/termbox-go"
 	"github.com/mattn/go-isatty"
+	termbox "github.com/nsf/termbox-go"
 )
 
 func main() {
