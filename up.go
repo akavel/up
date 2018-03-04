@@ -30,41 +30,28 @@ func main() {
 	go collect()
 
 	var (
-		prompt  = []rune("| ")
-		command = []rune{}
-		cursor  = 0
+		editor = NewEditor("| ")
 	)
 
 	// Main loop
 main_loop:
 	for {
 		// Draw command input line
-		for x, ch := range prompt {
-			termbox.SetCell(x, 0, ch, termbox.ColorWhite, termbox.ColorBlue)
-		}
-		for x, ch := range command {
-			termbox.SetCell(x+len(prompt), 0, ch, termbox.ColorWhite, termbox.ColorBlue)
-		}
-		termbox.SetCursor(len(prompt)+cursor, 0)
+		editor.Draw(0, 0, true)
 		termbox.Flush()
 
 		// Handle events
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
-			if ev.Ch != 0 {
-				// insert key into command (https://github.com/golang/go/wiki/SliceTricks#insert)
-				command = append(command, 0)
-				copy(command[cursor+1:], command[cursor:])
-				command[cursor] = ev.Ch
-				cursor++
+			// handle command-line editing keys
+			if editor.HandleKey(ev) {
 				continue main_loop
 			}
+			// handle other keys
 			switch ev.Key {
 			case termbox.KeyEsc, termbox.KeyCtrlC:
 				// quit
 				return
-			// handle command-line editing keys
-			default:
 			}
 		}
 	}
@@ -107,4 +94,46 @@ func collect() {
 	}
 	buf = buf[:n]
 	// TODO: use buf somewhere
+}
+
+type Editor struct {
+	// TODO: make it multiline. Reuse gocui or something for this?
+	prompt  []rune
+	command []rune
+	cursor  int
+}
+
+func NewEditor(prompt string) *Editor {
+	return &Editor{prompt: []rune(prompt)}
+}
+
+func (e *Editor) Draw(x, y int, setcursor bool) {
+	for i, ch := range e.prompt {
+		termbox.SetCell(x+i, y, ch, termbox.ColorWhite, termbox.ColorBlue)
+	}
+	for i, ch := range e.command {
+		termbox.SetCell(x+len(e.prompt)+i, y, ch, termbox.ColorWhite, termbox.ColorBlue)
+	}
+	if setcursor {
+		termbox.SetCursor(x+len(e.prompt)+e.cursor, y)
+	}
+}
+
+func (e *Editor) HandleKey(ev termbox.Event) bool {
+	if ev.Type != termbox.EventKey {
+		return false
+	}
+	if ev.Ch != 0 {
+		e.insert(ev.Ch)
+		return true
+	}
+	return false
+}
+
+func (e *Editor) insert(ch rune) {
+	// insert key into command (https://github.com/golang/go/wiki/SliceTricks#insert)
+	e.command = append(e.command, 0)
+	copy(e.command[e.cursor+1:], e.command[e.cursor:])
+	e.command[e.cursor] = ch
+	e.cursor++
 }
