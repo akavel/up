@@ -130,13 +130,13 @@ func (b *Buf) Draw(y0 int) {
 	x, y := 0, y0
 	for len(buf) > 0 && y < h {
 		ch, sz := utf8.DecodeRune(buf)
+		buf = buf[sz:]
 		if ch == '\n' {
 			// TODO: clear to the end of screen line
 			x, y = 0, y+1
 			continue
 		}
 		termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
-		buf = buf[sz:]
 		x++
 		if x > w {
 			x, y = 0, y+1
