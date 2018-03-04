@@ -29,10 +29,14 @@ func main() {
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
 	go collect()
 
-	for x, ch := range "hello world! :)" {
-		termbox.SetCell(x, 0, ch, termbox.ColorWhite, termbox.ColorBlack)
+	// Draw command input line
+	prompt := "| "
+	for x, ch := range prompt {
+		termbox.SetCell(x, 0, ch, termbox.ColorWhite, termbox.ColorBlue)
 	}
+	termbox.SetCursor(len(prompt), 0)
 	termbox.Flush()
+
 	for {
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
