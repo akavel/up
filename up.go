@@ -148,7 +148,7 @@ func (b *Buf) Draw(y0 int) {
 		buf = buf[sz:]
 		switch ch {
 		case '\n':
-			// TODO: clear to the end of screen line
+			b.endline(x, y, w)
 			x, y = 0, y+1
 			continue
 		case '\t':
@@ -169,10 +169,19 @@ func (b *Buf) Draw(y0 int) {
 			x, y = 0, y+1
 		}
 	}
+	for ; y < h; y++ {
+		b.endline(0, y, w)
+	}
 }
 
 func (b *Buf) putch(x, y int, ch rune) {
 	termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
+}
+
+func (b *Buf) endline(x, y, screenw int) {
+	for ; x < screenw; x++ {
+		b.putch(x, y, ' ')
+	}
 }
 
 func (b *Buf) NewReader() io.Reader {
