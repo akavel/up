@@ -133,17 +133,33 @@ func (b *Buf) Draw(y0 int) {
 	for len(buf) > 0 && y < h {
 		ch, sz := utf8.DecodeRune(buf)
 		buf = buf[sz:]
-		if ch == '\n' {
+		switch ch {
+		case '\n':
 			// TODO: clear to the end of screen line
 			x, y = 0, y+1
 			continue
+		case '\t':
+			const tabwidth = 8
+			b.putch(x, y, ' ')
+			for x%tabwidth < (tabwidth - 1) {
+				x++
+				if x >= w {
+					break
+				}
+				b.putch(x, y, ' ')
+			}
+		default:
+			b.putch(x, y, ch)
 		}
-		termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
 		x++
 		if x > w {
 			x, y = 0, y+1
 		}
 	}
+}
+
+func (b *Buf) putch(x, y int, ch rune) {
+	termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
 }
 
 type Editor struct {
