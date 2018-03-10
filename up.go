@@ -50,7 +50,7 @@ main_loop:
 			lastCommand = command
 			subprocess.Kill()
 			subprocess = StartSubprocess(inputBuf, command)
-			buf = subprocess.Buf()
+			buf = subprocess.Buf
 		}
 
 		// Draw command input line
@@ -174,6 +174,25 @@ func (b *Buf) putch(x, y int, ch rune) {
 	termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
 }
 
+func (b *Buf) NewReader() io.Reader {
+	// TODO: return EOF if input is fully buffered?
+	i := 0
+	return funcReader(func(p []byte) (n int, err error) {
+		b.nLock.Lock()
+		end := b.n
+		b.nLock.Unlock()
+		// TODO: don't return (0,nil), instead wait until at least 1 available,
+		// or return EOF on completion?
+		n = copy(p, b.bytes[i:end])
+		i += n
+		return n, nil
+	})
+}
+
+type funcReader func([]byte) (int, error)
+
+func (f funcReader) Read(p []byte) (int, error) { return f(p) }
+
 type Editor struct {
 	prompt []rune
 	// TODO: make editor multiline. Reuse gocui or something for this?
@@ -257,18 +276,18 @@ func (e *Editor) delete(dx int) {
 }
 
 type Subprocess struct {
-	buf    *Buf
+	Buf    *Buf
 	cancel context.CancelFunc
 }
 
 func StartSubprocess(inputBuf *Buf, command string) *Subprocess {
 	ctx, cancel := context.WithCancel(context.TODO())
-	s := Subprocess{
-		buf:    NewBuf(),
+	s := &Subprocess{
+		Buf:    NewBuf(),
 		cancel: cancel,
 	}
 	r, w := io.Pipe()
-	go s.buf.Collect(r)
+	go s.Buf.Collect(r)
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	cmd.Stdout = w
@@ -280,6 +299,7 @@ func StartSubprocess(inputBuf *Buf, command string) *Subprocess {
 		return s
 	}
 	go cmd.Wait()
+	return s
 }
 
 func (s *Subprocess) Kill() {
