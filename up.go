@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/mattn/go-isatty"
@@ -181,10 +182,14 @@ func (b *Buf) NewReader() io.Reader {
 		b.nLock.Lock()
 		end := b.n
 		b.nLock.Unlock()
-		// TODO: don't return (0,nil), instead wait until at least 1 available,
-		// or return EOF on completion?
 		n = copy(p, b.bytes[i:end])
 		i += n
+		if n == 0 {
+			// FIXME: GROSS HACK! To avoid busy-wait in caller, don't return
+			// (0,nil), instead wait until at least 1 available, or return (0,
+			// io.EOF) on completion
+			time.Sleep(100 * time.Millisecond)
+		}
 		return n, nil
 	})
 }
