@@ -30,6 +30,8 @@ func main() {
 		panic(err)
 	}
 	defer termbox.Close()
+	// TODO: do we need InputEsc below or not?
+	termbox.SetInputMode(termbox.InputAlt)
 
 	var (
 		editor      = NewEditor("| ")
@@ -46,7 +48,9 @@ func main() {
 	// Main loop
 main_loop:
 	for {
-		// Run command in background if needed
+		// Run command automatically in background if user edited it (and kill previous command)
+		// TODO: allow stopping/restarting this behavior via Ctrl-Enter
+		// TODO: allow stopping this behavior via Ctrl-C (and killing current command), but invent some nice way to quit then
 		command := editor.String()
 		if command != lastCommand {
 			lastCommand = command
@@ -70,15 +74,13 @@ main_loop:
 			}
 			// handle other keys
 			switch ev.Key {
-			case termbox.KeyEsc, termbox.KeyCtrlC:
+			case termbox.KeyCtrlC:
 				// quit
 				return
 			}
 		}
 	}
 
-	// TODO: run command automatically in bg after first " " (or ^Enter), via `bash -c`
-	// TODO: auto-kill the child process on any edit
 	// TODO: allow scrolling the output preview with pgup/pgdn keys
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 	// TODO: ^X - save into executable file upN.sh (with #!/bin/bash) and quit
