@@ -37,6 +37,7 @@ func main() {
 		subprocess  *Subprocess
 		inputBuf    = NewBuf()
 		buf         = inputBuf
+		// bufStyle = BufDrawing{}
 	)
 
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
@@ -166,7 +167,8 @@ func (b *Buf) Draw(y0 int) {
 		}
 		x++
 		if x > w {
-			x, y = 0, y+1
+			// x, y = 0, y+1
+			b.putch(w-1, y, '»') // TODO: also «
 		}
 	}
 	for ; y < h; y++ {
@@ -322,3 +324,9 @@ func (s *Subprocess) Kill() {
 	}
 	s.cancel()
 }
+
+// type BufDrawing struct {
+// 	Wrap bool
+// 	// TODO: Page int -- or maybe better: Y int (for pgup/pgdn scrolling)
+// 	// TODO: X int (for left<->right scrolling)
+// }
