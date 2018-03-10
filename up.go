@@ -68,6 +68,7 @@ main_loop:
 	// TODO: allow scrolling the output preview with pgup/pgdn keys
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 	// TODO: ^X - save into executable file upN.sh (with #!/bin/bash) and quit
+	// TODO: properly show all licenses of dependencies on --version
 	// TODO: [LATER] allow increasing size of input buffer with some key
 	// TODO: [LATER] on ^X, leave TUI and run the command through buffered input, then unpause rest of input
 	// TODO: [LATER] allow adding more elements of pipeline (initially, just writing `foo | bar` should work)
@@ -127,7 +128,7 @@ func (b *Buf) Draw(y0 int) {
 	buf := b.bytes[:b.n]
 	b.nLock.Unlock()
 	w, h := termbox.Size()
-	// TODO: handle runes properly, including their visual width
+	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
 	x, y := 0, y0
 	for len(buf) > 0 && y < h {
 		ch, sz := utf8.DecodeRune(buf)
