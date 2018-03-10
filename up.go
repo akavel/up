@@ -3,9 +3,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"sync"
 	"unicode/utf8"
 
@@ -29,16 +31,28 @@ func main() {
 	defer termbox.Close()
 
 	var (
-		editor = NewEditor("| ")
-		buf    = NewBuf()
+		editor      = NewEditor("| ")
+		lastCommand = ""
+		subprocess  *Subprocess
+		inputBuf    = NewBuf()
+		buf         = inputBuf
 	)
 
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
-	go buf.Collect(os.Stdin)
+	go inputBuf.Collect(os.Stdin)
 
 	// Main loop
 main_loop:
 	for {
+		// Run command in background if needed
+		command := editor.String()
+		if command != lastCommand {
+			lastCommand = command
+			subprocess.Kill()
+			subprocess = StartSubprocess(inputBuf, command)
+			buf = subprocess.Buf()
+		}
+
 		// Draw command input line
 		editor.Draw(0, 0, true)
 		buf.Draw(1)
@@ -61,9 +75,7 @@ main_loop:
 		}
 	}
 
-	// TODO: using tcell, edit a command in bash format in multiline input box (or jroimartin/gocui?)
-	//       NOTE: gocui has trouble if we capture stdin. Try butchering ("total modding") peco/peco instead.
-	// TODO: run it automatically in bg after first " " (or ^Enter), via `bash -c`
+	// TODO: run command automatically in bg after first " " (or ^Enter), via `bash -c`
 	// TODO: auto-kill the child process on any edit
 	// TODO: allow scrolling the output preview with pgup/pgdn keys
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
@@ -163,8 +175,9 @@ func (b *Buf) putch(x, y int, ch rune) {
 }
 
 type Editor struct {
-	// TODO: make it multiline. Reuse gocui or something for this?
-	prompt  []rune
+	prompt []rune
+	// TODO: make editor multiline. Reuse gocui or something for this?
+	// TODO: rename 'command' to 'data' or 'value' or something more generic
 	command []rune
 	cursor  int
 	// lastw is length of command on last Draw
@@ -173,6 +186,10 @@ type Editor struct {
 
 func NewEditor(prompt string) *Editor {
 	return &Editor{prompt: []rune(prompt)}
+}
+
+func (e *Editor) String() string {
+	return string(e.command)
 }
 
 func (e *Editor) Draw(x, y int, setcursor bool) {
@@ -237,4 +254,37 @@ func (e *Editor) delete(dx int) {
 	}
 	e.command = append(e.command[:pos], e.command[pos+1:]...)
 	e.cursor = pos
+}
+
+type Subprocess struct {
+	buf    *Buf
+	cancel context.CancelFunc
+}
+
+func StartSubprocess(inputBuf *Buf, command string) *Subprocess {
+	ctx, cancel := context.WithCancel(context.TODO())
+	s := Subprocess{
+		buf:    NewBuf(),
+		cancel: cancel,
+	}
+	r, w := io.Pipe()
+	go s.buf.Collect(r)
+
+	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+	cmd.Stdout = w
+	cmd.Stderr = w
+	cmd.Stdin = inputBuf.NewReader()
+	err := cmd.Start()
+	if err != nil {
+		fmt.Fprintf(w, "up: %s", err)
+		return s
+	}
+	go cmd.Wait()
+}
+
+func (s *Subprocess) Kill() {
+	if s == nil {
+		return
+	}
+	s.cancel()
 }
