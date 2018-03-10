@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -39,7 +40,7 @@ func main() {
 		subprocess  *Subprocess
 		inputBuf    = NewBuf()
 		buf         = inputBuf
-		// bufStyle = BufDrawing{}
+		bufStyle    = BufDrawing{}
 	)
 
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
@@ -61,7 +62,7 @@ main_loop:
 
 		// Draw command input line
 		editor.Draw(0, 0, true)
-		buf.Draw(1)
+		buf.Draw(1, bufStyle)
 		termbox.Flush()
 
 		// Handle events
@@ -77,6 +78,13 @@ main_loop:
 			case termbox.KeyCtrlC:
 				// quit
 				return
+			case termbox.KeyArrowUp:
+				if bufStyle.Y > 0 {
+					bufStyle.Y--
+				}
+			case termbox.KeyArrowDown:
+				// TODO: limit to real height of buf
+				bufStyle.Y++
 			}
 		}
 	}
@@ -139,10 +147,19 @@ func (b *Buf) Collect(r io.Reader) {
 	}
 }
 
-func (b *Buf) Draw(y0 int) {
+func (b *Buf) Draw(y0 int, style BufDrawing) {
 	b.nLock.Lock()
 	buf := b.bytes[:b.n]
 	b.nLock.Unlock()
+
+	// PgDn/PgUp etc. support
+	for ; style.Y > 0; style.Y-- {
+		newline := bytes.IndexByte(buf, '\n')
+		if newline != -1 {
+			buf = buf[newline+1:]
+		}
+	}
+
 	w, h := termbox.Size()
 	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
 	x, y := 0, y0
@@ -327,8 +344,8 @@ func (s *Subprocess) Kill() {
 	s.cancel()
 }
 
-// type BufDrawing struct {
-// 	Wrap bool
-// 	// TODO: Page int -- or maybe better: Y int (for pgup/pgdn scrolling)
-// 	// TODO: X int (for left<->right scrolling)
-// }
+type BufDrawing struct {
+	// TODO: Wrap bool
+	Y int // for pgup/pgdn scrolling)
+	// TODO: X int (for left<->right scrolling)
+}
