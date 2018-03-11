@@ -294,21 +294,25 @@ func (e *Editor) Draw(tui tcell.Screen, x, y int, setcursor bool) {
 }
 
 func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
-	if ev.Key() == tcell.KeyRune {
+	if ev.Key() == tcell.KeyRune && ev.Modifiers()&(^tcell.ModShift) == 0 {
 		e.insert(ev.Rune())
 		return true
 	}
-	switch ev.Key() {
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
+	type keymod struct {
+		tcell.Key
+		tcell.ModMask
+	}
+	switch (keymod{ev.Key(), ev.Modifiers()}) {
+	case keymod{tcell.KeyBackspace, 0}, keymod{tcell.KeyBackspace2, 0}:
 		// See https://github.com/nsf/termbox-go/issues/145
 		e.delete(-1)
-	case tcell.KeyDelete:
+	case keymod{tcell.KeyDelete, 0}:
 		e.delete(0)
-	case tcell.KeyLeft:
+	case keymod{tcell.KeyLeft, 0}:
 		if e.cursor > 0 {
 			e.cursor--
 		}
-	case tcell.KeyRight:
+	case keymod{tcell.KeyRight, 0}:
 		if e.cursor < len(e.command) {
 			e.cursor++
 		}
