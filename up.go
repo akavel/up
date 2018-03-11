@@ -57,8 +57,14 @@ main_loop:
 		if command != lastCommand {
 			lastCommand = command
 			subprocess.Kill()
-			subprocess = StartSubprocess(inputBuf, command)
-			buf = subprocess.Buf
+			if command != "" {
+				subprocess = StartSubprocess(inputBuf, command)
+				buf = subprocess.Buf
+			} else {
+				// If command is empty, show original input data again (~ equivalent of typing `cat`)
+				subprocess = nil
+				buf = inputBuf
+			}
 		}
 
 		// Draw command input line
