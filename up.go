@@ -94,6 +94,11 @@ main_loop:
 				keymod{tcell.KeyCtrlC, tcell.ModCtrl}:
 				// quit
 				return
+			case keymod{tcell.KeyCtrlX, 0},
+				keymod{tcell.KeyCtrlX, tcell.ModCtrl}:
+				// write script and quit
+				writeScript(editor.String(), tui)
+				return
 			// TODO: move buf scroll handlers to Buf or BufDrawing struct
 			case keymod{tcell.KeyUp, 0}:
 				bufStyle.Y--
@@ -127,7 +132,6 @@ main_loop:
 	}
 
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
-	// TODO: ^X - save into executable file upN.sh (with #!/bin/bash) and quit
 	// TODO: properly show all licenses of dependencies on --version
 	// TODO: [LATER] allow increasing size of input buffer with some key
 	// TODO: [LATER] on ^X, leave TUI and run the command through buffered input, then unpause rest of input
@@ -409,4 +413,34 @@ func (b *BufDrawing) NormalizeY(nlines int) {
 type keymod struct {
 	tcell.Key
 	tcell.ModMask
+}
+
+func writeScript(command string, tui tcell.Screen) {
+	var f *os.File
+	var err error
+	// TODO: if we hit loop end, panic with some message
+	for i := 1; i < 1000; i++ {
+		f, err = os.OpenFile(fmt.Sprintf("up%d.sh", i), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0755)
+		if err != nil {
+			if os.IsExist(err) {
+				continue
+			}
+			// FIXME: don't panic, instead show error and let user try to copy & paste visually
+			panic(err)
+		} else {
+			break
+		}
+	}
+	_, err = fmt.Fprintf(f, "#!/bin/bash\n%s", command)
+	if err != nil {
+		// FIXME: don't panic, instead show error and let user try to copy & paste visually
+		panic(err)
+	}
+	err = f.Close()
+	if err != nil {
+		// FIXME: don't panic, instead show error and let user try to copy & paste visually
+		panic(err)
+	}
+	tui.Fini()
+	fmt.Printf("up: command written to: %s\n", f.Name())
 }
