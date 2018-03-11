@@ -41,6 +41,7 @@ func main() {
 		inputBuf    = NewBuf()
 		buf         = inputBuf
 		bufStyle    = BufDrawing{}
+		bufY        = 1
 	)
 
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
@@ -62,7 +63,7 @@ main_loop:
 
 		// Draw command input line
 		editor.Draw(0, 0, true)
-		buf.Draw(1, bufStyle)
+		buf.Draw(bufY, bufStyle)
 		termbox.Flush()
 
 		// Handle events
@@ -78,13 +79,22 @@ main_loop:
 			case termbox.KeyCtrlC:
 				// quit
 				return
+			// TODO: move buf scroll handlers to Buf or BufDrawing struct
 			case termbox.KeyArrowUp:
-				if bufStyle.Y > 0 {
-					bufStyle.Y--
-				}
+				bufStyle.Y--
+				bufStyle.NormalizeY(buf.Lines())
 			case termbox.KeyArrowDown:
-				// TODO: limit to real height of buf
 				bufStyle.Y++
+				bufStyle.NormalizeY(buf.Lines())
+			case termbox.KeyPgdn:
+				// TODO: in top-right corner of Buf area, draw current line number & total # of lines
+				_, h := termbox.Size()
+				bufStyle.Y += h - bufY - 1
+				bufStyle.NormalizeY(buf.Lines())
+			case termbox.KeyPgup:
+				_, h := termbox.Size()
+				bufStyle.Y -= h - bufY - 1
+				bufStyle.NormalizeY(buf.Lines())
 			}
 		}
 	}
@@ -203,6 +213,14 @@ func (b *Buf) endline(x, y, screenw int) {
 	for ; x < screenw; x++ {
 		b.putch(x, y, ' ')
 	}
+}
+
+func (b *Buf) Lines() int {
+	b.nLock.Lock()
+	n := b.n
+	b.nLock.Unlock()
+	newlines := bytes.Count(b.bytes[:n], []byte{'\n'})
+	return newlines + 1
 }
 
 func (b *Buf) NewReader() io.Reader {
@@ -348,4 +366,13 @@ type BufDrawing struct {
 	// TODO: Wrap bool
 	Y int // for pgup/pgdn scrolling)
 	// TODO: X int (for left<->right scrolling)
+}
+
+func (b *BufDrawing) NormalizeY(nlines int) {
+	if b.Y >= nlines {
+		b.Y = nlines - 1
+	}
+	if b.Y < 0 {
+		b.Y = 0
+	}
 }
