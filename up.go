@@ -131,6 +131,8 @@ main_loop:
 		}
 	}
 
+	// TODO: properly handle fully consumed buffers, to enable piping into `wc -l` or `uniq -c` etc.
+	// TODO: [LATER] make it work on Windows; maybe with mattn/go-shellwords ?
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 	// TODO: properly show all licenses of dependencies on --version
 	// TODO: [LATER] allow increasing size of input buffer with some key
