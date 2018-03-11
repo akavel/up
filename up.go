@@ -433,7 +433,7 @@ func writeScript(command string, tui tcell.Screen) {
 			break
 		}
 	}
-	_, err = fmt.Fprintf(f, "#!/bin/bash\n%s", command)
+	_, err = fmt.Fprintf(f, "#!/bin/bash\n%s\n", command)
 	if err != nil {
 		// FIXME: don't panic, instead show error and let user try to copy & paste visually
 		panic(err)
