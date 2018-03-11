@@ -45,6 +45,9 @@ func main() {
 		bufStyle    = BufDrawing{}
 		bufY        = 1
 	)
+	const (
+		xscroll = 8
+	)
 
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
 	go inputBuf.Collect(os.Stdin, func() {
@@ -79,7 +82,6 @@ main_loop:
 		tui.Show()
 
 		// Handle events
-		// TODO: how to interject with timer events triggering refresh?
 		switch ev := tui.PollEvent().(type) {
 		case *tcell.EventKey:
 			// handle command-line editing keys
@@ -87,26 +89,39 @@ main_loop:
 				continue main_loop
 			}
 			// handle other keys
-			switch ev.Key() {
-			case tcell.KeyCtrlC:
+			switch (keymod{ev.Key(), ev.Modifiers()}) {
+			case keymod{tcell.KeyCtrlC, 0},
+				keymod{tcell.KeyCtrlC, tcell.ModCtrl}:
 				// quit
 				return
 			// TODO: move buf scroll handlers to Buf or BufDrawing struct
-			case tcell.KeyUp:
+			case keymod{tcell.KeyUp, 0}:
 				bufStyle.Y--
 				bufStyle.NormalizeY(buf.Lines())
-			case tcell.KeyDown:
+			case keymod{tcell.KeyDown, 0}:
 				bufStyle.Y++
 				bufStyle.NormalizeY(buf.Lines())
-			case tcell.KeyPgDn:
+			case keymod{tcell.KeyPgDn, 0}:
 				// TODO: in top-right corner of Buf area, draw current line number & total # of lines
 				_, h := tui.Size()
 				bufStyle.Y += h - bufY - 1
 				bufStyle.NormalizeY(buf.Lines())
-			case tcell.KeyPgUp:
+			case keymod{tcell.KeyPgUp, 0}:
 				_, h := tui.Size()
 				bufStyle.Y -= h - bufY - 1
 				bufStyle.NormalizeY(buf.Lines())
+			case keymod{tcell.KeyLeft, tcell.ModAlt},
+				keymod{tcell.KeyLeft, tcell.ModCtrl}:
+				bufStyle.X -= xscroll
+				if bufStyle.X < 0 {
+					bufStyle.X = 0
+				}
+			case keymod{tcell.KeyRight, tcell.ModAlt},
+				keymod{tcell.KeyRight, tcell.ModCtrl}:
+				bufStyle.X += xscroll
+			case keymod{tcell.KeyHome, tcell.ModAlt},
+				keymod{tcell.KeyHome, tcell.ModCtrl}:
+				bufStyle.X = 0
 			}
 		}
 	}
@@ -182,47 +197,54 @@ func (b *Buf) Draw(tui tcell.Screen, y0 int, style BufDrawing) {
 	}
 
 	w, h := tui.Size()
-	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
+	putch := func(x, y int, ch rune) {
+		if x <= style.X && style.X != 0 {
+			x, ch = 0, '«'
+		} else {
+			x -= style.X
+		}
+		if x >= w {
+			x, ch = w-1, '»'
+		}
+		tui.SetCell(x, y, tcell.StyleDefault, ch)
+	}
+	endline := func(x, y int) {
+		x -= style.X
+		if x < 0 {
+			x = 0
+		}
+		for ; x < w; x++ {
+			tui.SetCell(x, y, tcell.StyleDefault, ' ')
+		}
+	}
+
 	x, y := 0, y0
+	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
 	for len(buf) > 0 && y < h {
 		ch, sz := utf8.DecodeRune(buf)
 		buf = buf[sz:]
 		switch ch {
 		case '\n':
-			b.endline(tui, x, y, w)
+			endline(x, y)
 			x, y = 0, y+1
 			continue
 		case '\t':
 			const tabwidth = 8
-			b.putch(tui, x, y, ' ')
+			putch(x, y, ' ')
 			for x%tabwidth < (tabwidth - 1) {
 				x++
 				if x >= w {
 					break
 				}
-				b.putch(tui, x, y, ' ')
+				putch(x, y, ' ')
 			}
 		default:
-			b.putch(tui, x, y, ch)
+			putch(x, y, ch)
 		}
 		x++
-		if x > w {
-			// x, y = 0, y+1
-			b.putch(tui, w-1, y, '»') // TODO: also «
-		}
 	}
 	for ; y < h; y++ {
-		b.endline(tui, 0, y, w)
-	}
-}
-
-func (b *Buf) putch(tui tcell.Screen, x, y int, ch rune) {
-	tui.SetCell(x, y, tcell.StyleDefault, ch)
-}
-
-func (b *Buf) endline(tui tcell.Screen, x, y, screenw int) {
-	for ; x < screenw; x++ {
-		b.putch(tui, x, y, ' ')
+		endline(0, y)
 	}
 }
 
@@ -298,10 +320,6 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 		e.insert(ev.Rune())
 		return true
 	}
-	type keymod struct {
-		tcell.Key
-		tcell.ModMask
-	}
 	switch (keymod{ev.Key(), ev.Modifiers()}) {
 	case keymod{tcell.KeyBackspace, 0}, keymod{tcell.KeyBackspace2, 0}:
 		// See https://github.com/nsf/termbox-go/issues/145
@@ -376,7 +394,7 @@ func (s *Subprocess) Kill() {
 type BufDrawing struct {
 	// TODO: Wrap bool
 	Y int // for pgup/pgdn scrolling)
-	// TODO: X int (for left<->right scrolling)
+	X int // for left<->right scrolling
 }
 
 func (b *BufDrawing) NormalizeY(nlines int) {
@@ -386,4 +404,9 @@ func (b *BufDrawing) NormalizeY(nlines int) {
 	if b.Y < 0 {
 		b.Y = 0
 	}
+}
+
+type keymod struct {
+	tcell.Key
+	tcell.ModMask
 }
