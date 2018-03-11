@@ -13,8 +13,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/gdamore/tcell"
 	"github.com/mattn/go-isatty"
-	termbox "github.com/nsf/termbox-go"
 )
 
 func main() {
@@ -26,13 +26,15 @@ func main() {
 
 	// Init TUI code
 	// TODO: maybe try gocui or tcell?
-	err := termbox.Init()
+	tui, err := tcell.NewScreen()
 	if err != nil {
 		panic(err)
 	}
-	defer termbox.Close()
-	// TODO: do we need InputEsc below or not?
-	termbox.SetInputMode(termbox.InputAlt)
+	err = tui.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer tui.Fini()
 
 	var (
 		editor      = NewEditor("| ")
@@ -45,7 +47,9 @@ func main() {
 	)
 
 	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
-	go inputBuf.Collect(os.Stdin)
+	go inputBuf.Collect(os.Stdin, func() {
+		tui.PostEvent(tcell.NewEventInterrupt(nil))
+	})
 
 	// Main loop
 main_loop:
@@ -58,7 +62,9 @@ main_loop:
 			lastCommand = command
 			subprocess.Kill()
 			if command != "" {
-				subprocess = StartSubprocess(inputBuf, command)
+				subprocess = StartSubprocess(inputBuf, command, func() {
+					tui.PostEvent(tcell.NewEventInterrupt(nil))
+				})
 				buf = subprocess.Buf
 			} else {
 				// If command is empty, show original input data again (~ equivalent of typing `cat`)
@@ -68,44 +74,43 @@ main_loop:
 		}
 
 		// Draw command input line
-		editor.Draw(0, 0, true)
-		buf.Draw(bufY, bufStyle)
-		termbox.Flush()
+		editor.Draw(tui, 0, 0, true)
+		buf.Draw(tui, bufY, bufStyle)
+		tui.Show()
 
 		// Handle events
 		// TODO: how to interject with timer events triggering refresh?
-		switch ev := termbox.PollEvent(); ev.Type {
-		case termbox.EventKey:
+		switch ev := tui.PollEvent().(type) {
+		case *tcell.EventKey:
 			// handle command-line editing keys
 			if editor.HandleKey(ev) {
 				continue main_loop
 			}
 			// handle other keys
-			switch ev.Key {
-			case termbox.KeyCtrlC:
+			switch ev.Key() {
+			case tcell.KeyCtrlC:
 				// quit
 				return
 			// TODO: move buf scroll handlers to Buf or BufDrawing struct
-			case termbox.KeyArrowUp:
+			case tcell.KeyUp:
 				bufStyle.Y--
 				bufStyle.NormalizeY(buf.Lines())
-			case termbox.KeyArrowDown:
+			case tcell.KeyDown:
 				bufStyle.Y++
 				bufStyle.NormalizeY(buf.Lines())
-			case termbox.KeyPgdn:
+			case tcell.KeyPgDn:
 				// TODO: in top-right corner of Buf area, draw current line number & total # of lines
-				_, h := termbox.Size()
+				_, h := tui.Size()
 				bufStyle.Y += h - bufY - 1
 				bufStyle.NormalizeY(buf.Lines())
-			case termbox.KeyPgup:
-				_, h := termbox.Size()
+			case tcell.KeyPgUp:
+				_, h := tui.Size()
 				bufStyle.Y -= h - bufY - 1
 				bufStyle.NormalizeY(buf.Lines())
 			}
 		}
 	}
 
-	// TODO: allow scrolling the output preview with pgup/pgdn keys
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 	// TODO: ^X - save into executable file upN.sh (with #!/bin/bash) and quit
 	// TODO: properly show all licenses of dependencies on --version
@@ -142,14 +147,14 @@ func NewBuf() *Buf {
 	return &Buf{bytes: make([]byte, bufsize)}
 }
 
-func (b *Buf) Collect(r io.Reader) {
+func (b *Buf) Collect(r io.Reader, signal func()) {
 	// TODO: allow stopping - take context?
 	for {
 		n, err := r.Read(b.bytes[b.n:])
 		b.nLock.Lock()
 		b.n += n
 		b.nLock.Unlock()
-		go termbox.Interrupt()
+		go signal()
 		if err == io.EOF {
 			// TODO: mark work as complete
 			return
@@ -163,7 +168,7 @@ func (b *Buf) Collect(r io.Reader) {
 	}
 }
 
-func (b *Buf) Draw(y0 int, style BufDrawing) {
+func (b *Buf) Draw(tui tcell.Screen, y0 int, style BufDrawing) {
 	b.nLock.Lock()
 	buf := b.bytes[:b.n]
 	b.nLock.Unlock()
@@ -176,7 +181,7 @@ func (b *Buf) Draw(y0 int, style BufDrawing) {
 		}
 	}
 
-	w, h := termbox.Size()
+	w, h := tui.Size()
 	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
 	x, y := 0, y0
 	for len(buf) > 0 && y < h {
@@ -184,40 +189,40 @@ func (b *Buf) Draw(y0 int, style BufDrawing) {
 		buf = buf[sz:]
 		switch ch {
 		case '\n':
-			b.endline(x, y, w)
+			b.endline(tui, x, y, w)
 			x, y = 0, y+1
 			continue
 		case '\t':
 			const tabwidth = 8
-			b.putch(x, y, ' ')
+			b.putch(tui, x, y, ' ')
 			for x%tabwidth < (tabwidth - 1) {
 				x++
 				if x >= w {
 					break
 				}
-				b.putch(x, y, ' ')
+				b.putch(tui, x, y, ' ')
 			}
 		default:
-			b.putch(x, y, ch)
+			b.putch(tui, x, y, ch)
 		}
 		x++
 		if x > w {
 			// x, y = 0, y+1
-			b.putch(w-1, y, '»') // TODO: also «
+			b.putch(tui, w-1, y, '»') // TODO: also «
 		}
 	}
 	for ; y < h; y++ {
-		b.endline(0, y, w)
+		b.endline(tui, 0, y, w)
 	}
 }
 
-func (b *Buf) putch(x, y int, ch rune) {
-	termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
+func (b *Buf) putch(tui tcell.Screen, x, y int, ch rune) {
+	tui.SetCell(x, y, tcell.StyleDefault, ch)
 }
 
-func (b *Buf) endline(x, y, screenw int) {
+func (b *Buf) endline(tui tcell.Screen, x, y, screenw int) {
 	for ; x < screenw; x++ {
-		b.putch(x, y, ' ')
+		b.putch(tui, x, y, ' ')
 	}
 }
 
@@ -270,44 +275,40 @@ func (e *Editor) String() string {
 	return string(e.command)
 }
 
-func (e *Editor) Draw(x, y int, setcursor bool) {
+func (e *Editor) Draw(tui tcell.Screen, x, y int, setcursor bool) {
+	promptStyle := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
 	for i, ch := range e.prompt {
-		termbox.SetCell(x+i, y, ch, termbox.ColorWhite, termbox.ColorBlue)
+		tui.SetCell(x+i, y, promptStyle, ch)
 	}
 	for i, ch := range e.command {
-		termbox.SetCell(x+len(e.prompt)+i, y, ch, termbox.ColorWhite, termbox.ColorBlue)
+		tui.SetCell(x+len(e.prompt)+i, y, promptStyle, ch)
 	}
 	// clear remains of last command if needed
 	for i := len(e.command); i < e.lastw; i++ {
-		termbox.SetCell(x+len(e.prompt)+i, y, ' ', termbox.ColorDefault, termbox.ColorDefault)
+		tui.SetCell(x+len(e.prompt)+i, y, tcell.StyleDefault, ' ')
 	}
 	if setcursor {
-		termbox.SetCursor(x+len(e.prompt)+e.cursor, y)
+		tui.ShowCursor(x+len(e.prompt)+e.cursor, y)
 	}
 	e.lastw = len(e.command)
 }
 
-func (e *Editor) HandleKey(ev termbox.Event) bool {
-	if ev.Type != termbox.EventKey {
-		return false
-	}
-	if ev.Ch != 0 {
-		e.insert(ev.Ch)
+func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
+	if ev.Key() == tcell.KeyRune {
+		e.insert(ev.Rune())
 		return true
 	}
-	switch ev.Key {
-	case termbox.KeySpace:
-		e.insert(' ')
-	case termbox.KeyBackspace, termbox.KeyBackspace2:
+	switch ev.Key() {
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		// See https://github.com/nsf/termbox-go/issues/145
 		e.delete(-1)
-	case termbox.KeyDelete:
+	case tcell.KeyDelete:
 		e.delete(0)
-	case termbox.KeyArrowLeft:
+	case tcell.KeyLeft:
 		if e.cursor > 0 {
 			e.cursor--
 		}
-	case termbox.KeyArrowRight:
+	case tcell.KeyRight:
 		if e.cursor < len(e.command) {
 			e.cursor++
 		}
@@ -339,14 +340,14 @@ type Subprocess struct {
 	cancel context.CancelFunc
 }
 
-func StartSubprocess(inputBuf *Buf, command string) *Subprocess {
+func StartSubprocess(inputBuf *Buf, command string, signal func()) *Subprocess {
 	ctx, cancel := context.WithCancel(context.TODO())
 	s := &Subprocess{
 		Buf:    NewBuf(),
 		cancel: cancel,
 	}
 	r, w := io.Pipe()
-	go s.Buf.Collect(r)
+	go s.Buf.Collect(r, signal)
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	cmd.Stdout = w
