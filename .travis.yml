@@ -2,3 +2,9 @@ language: go
 go:
   - 1.x
   - master
+
+# NOTE(2018.04): experimental support for vgo
+before_install:
+  - go get -u golang.org/x/vgo
+after_script:
+  - vgo build
