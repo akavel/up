@@ -147,6 +147,8 @@ main_loop:
 	}
 
 	// TODO: properly handle fully consumed buffers, to enable piping into `wc -l` or `uniq -c` etc.
+	// TODO: readme, asciinema
+	// TODO: on github: add issues, incl. up-for-grabs / help-wanted
 	// TODO: [LATER] make it work on Windows; maybe with mattn/go-shellwords ?
 	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 	// TODO: properly show all licenses of dependencies on --version
@@ -168,7 +170,7 @@ main_loop:
 	// TODO: [LATER] become pluggable into http://luna-lang.org
 	// TODO: [LATER][MAYBE] allow "plugins" ("combos" - commands with default options) e.g. for Lua `lua -e`+auto-quote, etc.
 	// TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
-	// TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux; data exploration? data science?
+	// TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux, up-for-grabs.net; data exploration? data science?
 }
 
 type Buf struct {
