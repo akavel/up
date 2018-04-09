@@ -22,6 +22,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"sync"
@@ -67,6 +69,15 @@ func main() {
 	go inputBuf.Collect(os.Stdin, func() {
 		tui.PostEvent(tcell.NewEventInterrupt(nil))
 	})
+
+	log.SetOutput(ioutil.Discard)
+	if len(os.Args) > 1 && os.Args[1] == "--debug" {
+		debug, err := os.Create("up.debug")
+		if err != nil {
+			panic(err)
+		}
+		log.SetOutput(debug)
+	}
 
 	// Main loop
 main_loop:
@@ -413,6 +424,7 @@ func StartSubprocess(inputBuf *Buf, command string, signal func()) *Subprocess {
 		fmt.Fprintf(w, "up: %s", err)
 		return s
 	}
+	log.Println(cmd.Path)
 	go cmd.Wait()
 	return s
 }
