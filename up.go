@@ -57,7 +57,7 @@ func main() {
 		subprocess  *Subprocess
 		inputBuf    = NewBuf()
 		buf         = inputBuf
-		bufStyle    = BufDrawing{}
+		bufView     = BufView{}
 		bufY        = 1
 	)
 	const (
@@ -93,7 +93,7 @@ main_loop:
 
 		// Draw command input line
 		editor.Draw(tui, 0, 0, true)
-		buf.Draw(tui, bufY, bufStyle)
+		buf.Draw(tui, bufY, bufView)
 		tui.Show()
 
 		// Handle events
@@ -114,34 +114,34 @@ main_loop:
 				// write script and quit
 				writeScript(editor.String(), tui)
 				return
-			// TODO: move buf scroll handlers to Buf or BufDrawing struct
+			// TODO: move buf scroll handlers to Buf or BufView struct
 			case keymod{tcell.KeyUp, 0}:
-				bufStyle.Y--
-				bufStyle.NormalizeY(buf.Lines())
+				bufView.Y--
+				bufView.NormalizeY(buf.Lines())
 			case keymod{tcell.KeyDown, 0}:
-				bufStyle.Y++
-				bufStyle.NormalizeY(buf.Lines())
+				bufView.Y++
+				bufView.NormalizeY(buf.Lines())
 			case keymod{tcell.KeyPgDn, 0}:
 				// TODO: in top-right corner of Buf area, draw current line number & total # of lines
 				_, h := tui.Size()
-				bufStyle.Y += h - bufY - 1
-				bufStyle.NormalizeY(buf.Lines())
+				bufView.Y += h - bufY - 1
+				bufView.NormalizeY(buf.Lines())
 			case keymod{tcell.KeyPgUp, 0}:
 				_, h := tui.Size()
-				bufStyle.Y -= h - bufY - 1
-				bufStyle.NormalizeY(buf.Lines())
+				bufView.Y -= h - bufY - 1
+				bufView.NormalizeY(buf.Lines())
 			case keymod{tcell.KeyLeft, tcell.ModAlt},
 				keymod{tcell.KeyLeft, tcell.ModCtrl}:
-				bufStyle.X -= xscroll
-				if bufStyle.X < 0 {
-					bufStyle.X = 0
+				bufView.X -= xscroll
+				if bufView.X < 0 {
+					bufView.X = 0
 				}
 			case keymod{tcell.KeyRight, tcell.ModAlt},
 				keymod{tcell.KeyRight, tcell.ModCtrl}:
-				bufStyle.X += xscroll
+				bufView.X += xscroll
 			case keymod{tcell.KeyHome, tcell.ModAlt},
 				keymod{tcell.KeyHome, tcell.ModCtrl}:
-				bufStyle.X = 0
+				bufView.X = 0
 			}
 		}
 	}
@@ -206,13 +206,13 @@ func (b *Buf) Collect(r io.Reader, signal func()) {
 	}
 }
 
-func (b *Buf) Draw(tui tcell.Screen, y0 int, style BufDrawing) {
+func (b *Buf) Draw(tui tcell.Screen, y0 int, view BufView) {
 	b.nLock.Lock()
 	buf := b.bytes[:b.n]
 	b.nLock.Unlock()
 
 	// PgDn/PgUp etc. support
-	for ; style.Y > 0; style.Y-- {
+	for ; view.Y > 0; view.Y-- {
 		newline := bytes.IndexByte(buf, '\n')
 		if newline != -1 {
 			buf = buf[newline+1:]
@@ -221,10 +221,10 @@ func (b *Buf) Draw(tui tcell.Screen, y0 int, style BufDrawing) {
 
 	w, h := tui.Size()
 	putch := func(x, y int, ch rune) {
-		if x <= style.X && style.X != 0 {
+		if x <= view.X && view.X != 0 {
 			x, ch = 0, '«'
 		} else {
-			x -= style.X
+			x -= view.X
 		}
 		if x >= w {
 			x, ch = w-1, '»'
@@ -232,7 +232,7 @@ func (b *Buf) Draw(tui tcell.Screen, y0 int, style BufDrawing) {
 		tui.SetCell(x, y, tcell.StyleDefault, ch)
 	}
 	endline := func(x, y int) {
-		x -= style.X
+		x -= view.X
 		if x < 0 {
 			x = 0
 		}
@@ -414,13 +414,13 @@ func (s *Subprocess) Kill() {
 	s.cancel()
 }
 
-type BufDrawing struct {
+type BufView struct {
 	// TODO: Wrap bool
 	Y int // for pgup/pgdn scrolling)
 	X int // for left<->right scrolling
 }
 
-func (b *BufDrawing) NormalizeY(nlines int) {
+func (b *BufView) NormalizeY(nlines int) {
 	if b.Y >= nlines {
 		b.Y = nlines - 1
 	}
