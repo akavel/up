@@ -25,7 +25,6 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell"
@@ -175,26 +174,34 @@ main_loop:
 
 type Buf struct {
 	bytes []byte
-	// NOTE: n can be written only by Collect
-	n     int
-	nLock sync.Mutex
+
+	mu   sync.Mutex // guards the following fields
+	cond *sync.Cond
+	// NOTE: n and eof can be written only by Collect
+	n   int
+	eof bool
 }
 
 func NewBuf() *Buf {
 	const bufsize = 40 * 1024 * 1024 // 40 MB
-	return &Buf{bytes: make([]byte, bufsize)}
+	buf := &Buf{bytes: make([]byte, bufsize)}
+	buf.cond = sync.NewCond(&buf.mu)
+	return buf
 }
 
 func (b *Buf) Collect(r io.Reader, signal func()) {
 	// TODO: allow stopping - take context?
 	for {
 		n, err := r.Read(b.bytes[b.n:])
-		b.nLock.Lock()
+		b.mu.Lock()
 		b.n += n
-		b.nLock.Unlock()
+		if err == io.EOF {
+			b.eof = true
+		}
+		b.cond.Broadcast()
+		b.mu.Unlock()
 		go signal()
 		if err == io.EOF {
-			// TODO: mark work as complete
 			return
 		} else if err != nil {
 			// TODO: better handling of errors
@@ -207,9 +214,9 @@ func (b *Buf) Collect(r io.Reader, signal func()) {
 }
 
 func (b *Buf) Draw(tui tcell.Screen, y0 int, view BufView) {
-	b.nLock.Lock()
+	b.mu.Lock()
 	buf := b.bytes[:b.n]
-	b.nLock.Unlock()
+	b.mu.Unlock()
 
 	// PgDn/PgUp etc. support
 	for ; view.Y > 0; view.Y-- {
@@ -272,29 +279,32 @@ func (b *Buf) Draw(tui tcell.Screen, y0 int, view BufView) {
 }
 
 func (b *Buf) Lines() int {
-	b.nLock.Lock()
+	b.mu.Lock()
 	n := b.n
-	b.nLock.Unlock()
+	b.mu.Unlock()
 	newlines := bytes.Count(b.bytes[:n], []byte{'\n'})
 	return newlines + 1
 }
 
 func (b *Buf) NewReader() io.Reader {
-	// TODO: return EOF if input is fully buffered?
 	i := 0
 	return funcReader(func(p []byte) (n int, err error) {
-		b.nLock.Lock()
+		b.mu.Lock()
 		end := b.n
-		b.nLock.Unlock()
+		for end == i && !b.eof && end < len(b.bytes) {
+			// TODO: don't return EOF if input is fully buffered? difficult choice :/
+			// FIXME: somehow let GC collect this goroutine if its caller is killed & GCed
+			// TODO: track leaking of these goroutines, see rsc's last hint in https://golang.org/issue/24696
+			b.cond.Wait()
+		}
+		b.mu.Unlock()
 		n = copy(p, b.bytes[i:end])
 		i += n
-		if n == 0 {
-			// FIXME: GROSS HACK! To avoid busy-wait in caller, don't return
-			// (0,nil), instead wait until at least 1 available, or return (0,
-			// io.EOF) on completion
-			time.Sleep(100 * time.Millisecond)
+		if n > 0 {
+			return n, nil
+		} else {
+			return 0, io.EOF
 		}
-		return n, nil
 	})
 }
 
