@@ -33,154 +33,369 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-func main() {
-	// TODO: Without below block, we'd hang with no piped input (see github.com/peco/peco, mattn/gof, fzf, etc.)
-	if isatty.IsTerminal(os.Stdin.Fd()) {
-		fmt.Fprintln(os.Stderr, "error: up requires some data piped on standard input, e.g.: `echo hello world | up`")
-		os.Exit(1)
-	}
+// TODO: properly handle fully consumed buffers, to enable piping into `wc -l` or `uniq -c` etc.
+// TODO: readme, asciinema
+// TODO: on github: add issues, incl. up-for-grabs / help-wanted
+// TODO: [LATER] make it work on Windows; maybe with mattn/go-shellwords ?
+// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
+// TODO: properly show all licenses of dependencies on --version
+// TODO: [LATER] allow increasing size of input buffer with some key
+// TODO: [LATER] on ^X, leave TUI and run the command through buffered input, then unpause rest of input
+// TODO: [LATER] allow adding more elements of pipeline (initially, just writing `foo | bar` should work)
+// TODO: [LATER] allow invocation with partial command, like: `up grep -i`
+// TODO: [LATER][MAYBE] allow reading upN.sh scripts
+// TODO: [LATER] auto-save and/or save on Ctrl-S or something
+// TODO: [MUCH LATER] readline-like rich editing support? and completion?
+// TODO: [MUCH LATER] integration with fzf? and pindexis/marker?
+// TODO: [LATER] forking and unforking pipelines
+// TODO: [LATER] capture output of a running process (see: https://stackoverflow.com/q/19584825/98528)
+// TODO: [LATER] richer TUI:
+// - show # of read lines & kbytes
+// - show status (errorlevel) of process, or that it's still running (also with background colors)
+// - show if we've read whole stdin, or it's still not EOF
+// - allow copying and pasting to/from command line
+// - show help by default, including key to disable it (F1, Alt-h)
+// TODO: [LATER] allow connecting external editor (become server/engine via e.g. socket)
+// TODO: [LATER] become pluggable into http://luna-lang.org
+// TODO: [LATER][MAYBE] allow "plugins" ("combos" - commands with default options) e.g. for Lua `lua -e`+auto-quote, etc.
+// TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
+// TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux, up-for-grabs.net; data exploration? data science?
 
-	// Init TUI code
-	// TODO: maybe try gocui or tcell?
-	tui, err := tcell.NewScreen()
-	if err != nil {
-		panic(err)
-	}
-	err = tui.Init()
-	if err != nil {
-		panic(err)
-	}
+func main() {
+	// Handle command-line flags
+	parseFlags()
+
+	// Initialize TUI infrastructure
+	tui := initTUI()
 	defer tui.Fini()
 
+	// Initialize 2 main UI parts
 	var (
-		editor      = NewEditor("| ")
-		lastCommand = ""
-		subprocess  *Subprocess
-		inputBuf    = NewBuf()
-		buf         = inputBuf
-		bufView     = BufView{}
-		bufY        = 1
+		// The top line of the TUI is an editable command, which will be used
+		// as a pipeline for data we read from stdin
+		commandEditor = NewEditor("| ")
+		// The rest of the screen is a view of the results of the command
+		commandOutput = BufView{ScreenY: 1}
 	)
-	const (
-		xscroll = 8
+	_, screenH := tui.Size()
+	commandOutput.H = screenH - commandOutput.ScreenY
+
+	// Initialize main data flow
+	var (
+		stdinCapture = NewBuf().StartCapturing(os.Stdin, func() {
+			// When some new data shows up on stdin, we raise a custom signal,
+			// so further down we will know to refresh commandOutput
+			tui.PostEvent(tcell.NewEventInterrupt(nil))
+		})
+		// Initially, no subprocess is running, as no command is entered yet
+		commandSubprocess *Subprocess = nil
 	)
+	// Intially, for user's convenience, show the raw input data, as if `cat` command was typed
+	commandOutput.Buf = stdinCapture
 
-	// In background, start collecting input from stdin to internal buffer of size 40 MB, then pause it
-	go inputBuf.Collect(os.Stdin, func() {
-		tui.PostEvent(tcell.NewEventInterrupt(nil))
-	})
+	// Main loop
+	lastCommand := ""
+	for {
+		// If user edited the command, immediately run it in background, and
+		// kill the previously running command.
+		command := commandEditor.String()
+		if command != lastCommand {
+			commandSubprocess.Kill()
+			if command != "" {
+				// TODO: wrap the PostEvent in some helper named func
+				commandSubprocess = StartSubprocess(command, stdinCapture, func() {
+					tui.PostEvent(tcell.NewEventInterrupt(nil))
+				})
+				commandOutput.Buf = commandSubprocess.Buf
+			} else {
+				// If command is empty, show original input data again (~ equivalent of typing `cat`)
+				commandSubprocess = nil
+				commandOutput.Buf = stdinCapture
+			}
+		}
+		lastCommand = command
 
+		// Draw UI
+		commandEditor.Draw(tui, 0, 0, true)
+		commandOutput.Draw(tui)
+		tui.Show()
+
+		// Handle UI events
+		switch ev := tui.PollEvent().(type) {
+		// Key pressed
+		case *tcell.EventKey:
+			// Is it a command editor key?
+			if commandEditor.HandleKey(ev) {
+				continue
+			}
+			// Is it a command output view key?
+			if commandOutput.HandleKey(ev) {
+				continue
+			}
+			// Some other global key combinations
+			switch getKey(ev) {
+			case key(tcell.KeyCtrlC),
+				ctrlKey(tcell.KeyCtrlC):
+				// Quit
+				// TODO: print the command in case user did this accidentally
+				return
+			case key(tcell.KeyCtrlX),
+				ctrlKey(tcell.KeyCtrlX):
+				// Write script 'upN.sh' and quit
+				writeScript(commandEditor.String(), tui)
+				return
+			}
+		}
+	}
+}
+
+func parseFlags() {
 	log.SetOutput(ioutil.Discard)
 	if len(os.Args) > 1 && os.Args[1] == "--debug" {
 		debug, err := os.Create("up.debug")
 		if err != nil {
-			panic(err)
+			die(err.Error())
 		}
 		log.SetOutput(debug)
 	}
+}
 
-	// Main loop
-main_loop:
-	for {
-		// Run command automatically in background if user edited it (and kill previous command)
-		// TODO: allow stopping/restarting this behavior via Ctrl-Enter
-		// TODO: allow stopping this behavior via Ctrl-C (and killing current command), but invent some nice way to quit then
-		command := editor.String()
-		if command != lastCommand {
-			lastCommand = command
-			subprocess.Kill()
-			if command != "" {
-				subprocess = StartSubprocess(inputBuf, command, func() {
-					tui.PostEvent(tcell.NewEventInterrupt(nil))
-				})
-				buf = subprocess.Buf
-			} else {
-				// If command is empty, show original input data again (~ equivalent of typing `cat`)
-				subprocess = nil
-				buf = inputBuf
-			}
+func initTUI() tcell.Screen {
+	// TODO: Without below block, we'd hang when nothing is piped on input (see
+	// github.com/peco/peco, mattn/gof, fzf, etc.)
+	if isatty.IsTerminal(os.Stdin.Fd()) {
+		die("up requires some data piped on standard input, for example try: `echo hello world | up`")
+	}
+
+	// Init TUI code
+	// TODO: maybe try gocui or termbox?
+	tui, err := tcell.NewScreen()
+	if err != nil {
+		die(err.Error())
+	}
+	err = tui.Init()
+	if err != nil {
+		die(err.Error())
+	}
+	return tui
+}
+
+func die(message string) {
+	os.Stderr.WriteString("error: " + message + "\n")
+	os.Exit(1)
+}
+
+func NewEditor(prompt string) *Editor {
+	return &Editor{prompt: []rune(prompt)}
+}
+
+type Editor struct {
+	// TODO: make editor multiline. Reuse gocui or something for this?
+	prompt []rune
+	value  []rune
+	cursor int
+	// lastw is length of value on last Draw; we need it to know how much to erase after backspace
+	lastw int
+}
+
+func (e *Editor) String() string { return string(e.value) }
+
+func (e *Editor) Draw(tui tcell.Screen, x, y int, setcursor bool) {
+	// Draw prompt & the edited value - use white letters on blue background
+	style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
+	for i, ch := range e.prompt {
+		tui.SetCell(x+i, y, style, ch)
+	}
+	for i, ch := range e.value {
+		tui.SetCell(x+len(e.prompt)+i, y, style, ch)
+	}
+
+	// Clear remains of last value if needed
+	for i := len(e.value); i < e.lastw; i++ {
+		tui.SetCell(x+len(e.prompt)+i, y, tcell.StyleDefault, ' ')
+	}
+	e.lastw = len(e.value)
+
+	// Show cursor if requested
+	if setcursor {
+		tui.ShowCursor(x+len(e.prompt)+e.cursor, y)
+	}
+}
+
+func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
+	// If a character is entered, with no modifiers except maybe shift, then just insert it
+	if ev.Key() == tcell.KeyRune && ev.Modifiers()&(^tcell.ModShift) == 0 {
+		e.insert(ev.Rune())
+		return true
+	}
+	// Handle editing & movement keys
+	switch getKey(ev) {
+	case key(tcell.KeyBackspace), key(tcell.KeyBackspace2):
+		// See https://github.com/nsf/termbox-go/issues/145
+		e.delete(-1)
+	case key(tcell.KeyDelete):
+		e.delete(0)
+	case key(tcell.KeyLeft):
+		if e.cursor > 0 {
+			e.cursor--
 		}
+	case key(tcell.KeyRight):
+		if e.cursor < len(e.value) {
+			e.cursor++
+		}
+	default:
+		// Unknown key/combination, not handled
+		return false
+	}
+	return true
+}
 
-		// Draw command input line
-		editor.Draw(tui, 0, 0, true)
-		buf.Draw(tui, bufY, bufView)
-		tui.Show()
+func (e *Editor) insert(ch rune) {
+	// Insert character into value (https://github.com/golang/go/wiki/SliceTricks#insert)
+	e.value = append(e.value, 0)
+	copy(e.value[e.cursor+1:], e.value[e.cursor:])
+	e.value[e.cursor] = ch
+	e.cursor++
+}
 
-		// Handle events
-		switch ev := tui.PollEvent().(type) {
-		case *tcell.EventKey:
-			// handle command-line editing keys
-			if editor.HandleKey(ev) {
-				continue main_loop
-			}
-			// handle other keys
-			switch (keymod{ev.Key(), ev.Modifiers()}) {
-			case keymod{tcell.KeyCtrlC, 0},
-				keymod{tcell.KeyCtrlC, tcell.ModCtrl}:
-				// quit
-				return
-			case keymod{tcell.KeyCtrlX, 0},
-				keymod{tcell.KeyCtrlX, tcell.ModCtrl}:
-				// write script and quit
-				writeScript(editor.String(), tui)
-				return
-			// TODO: move buf scroll handlers to Buf or BufView struct
-			case keymod{tcell.KeyUp, 0}:
-				bufView.Y--
-				bufView.NormalizeY(buf.Lines())
-			case keymod{tcell.KeyDown, 0}:
-				bufView.Y++
-				bufView.NormalizeY(buf.Lines())
-			case keymod{tcell.KeyPgDn, 0}:
-				// TODO: in top-right corner of Buf area, draw current line number & total # of lines
-				_, h := tui.Size()
-				bufView.Y += h - bufY - 1
-				bufView.NormalizeY(buf.Lines())
-			case keymod{tcell.KeyPgUp, 0}:
-				_, h := tui.Size()
-				bufView.Y -= h - bufY - 1
-				bufView.NormalizeY(buf.Lines())
-			case keymod{tcell.KeyLeft, tcell.ModAlt},
-				keymod{tcell.KeyLeft, tcell.ModCtrl}:
-				bufView.X -= xscroll
-				if bufView.X < 0 {
-					bufView.X = 0
-				}
-			case keymod{tcell.KeyRight, tcell.ModAlt},
-				keymod{tcell.KeyRight, tcell.ModCtrl}:
-				bufView.X += xscroll
-			case keymod{tcell.KeyHome, tcell.ModAlt},
-				keymod{tcell.KeyHome, tcell.ModCtrl}:
-				bufView.X = 0
-			}
+func (e *Editor) delete(dx int) {
+	pos := e.cursor + dx
+	if pos < 0 || pos >= len(e.value) {
+		return
+	}
+	e.value = append(e.value[:pos], e.value[pos+1:]...)
+	e.cursor = pos
+}
+
+type BufView struct {
+	ScreenY int // Y position of first drawn line on screen
+	H       int
+	// TODO: Wrap bool
+	Y   int // Y of the view in the Buf, for down/up scrolling
+	X   int // X of the view in the Buf, for left/right scrolling
+	Buf *Buf
+}
+
+func (v *BufView) Draw(tui tcell.Screen) {
+	buf := v.Buf.Snapshot()
+
+	// PgDn/PgUp etc. support
+	for ; v.Y > 0; v.Y-- {
+		newline := bytes.IndexByte(buf, '\n')
+		if newline != -1 {
+			buf = buf[newline+1:]
 		}
 	}
 
-	// TODO: properly handle fully consumed buffers, to enable piping into `wc -l` or `uniq -c` etc.
-	// TODO: readme, asciinema
-	// TODO: on github: add issues, incl. up-for-grabs / help-wanted
-	// TODO: [LATER] make it work on Windows; maybe with mattn/go-shellwords ?
-	// TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
-	// TODO: properly show all licenses of dependencies on --version
-	// TODO: [LATER] allow increasing size of input buffer with some key
-	// TODO: [LATER] on ^X, leave TUI and run the command through buffered input, then unpause rest of input
-	// TODO: [LATER] allow adding more elements of pipeline (initially, just writing `foo | bar` should work)
-	// TODO: [LATER] allow invocation with partial command, like: `up grep -i`
-	// TODO: [LATER][MAYBE] allow reading upN.sh scripts
-	// TODO: [LATER] auto-save and/or save on Ctrl-S or something
-	// TODO: [MUCH LATER] readline-like rich editing support? and completion?
-	// TODO: [MUCH LATER] integration with fzf? and pindexis/marker?
-	// TODO: [LATER] forking and unforking pipelines
-	// TODO: [LATER] capture output of a running process (see: https://stackoverflow.com/q/19584825/98528)
-	// TODO: [LATER] richer TUI:
-	// - show # of read lines & kbytes
-	// - show status (errorlevel) of process, or that it's still running (also with background colors)
-	// - allow copying and pasting to/from command line
-	// TODO: [LATER] allow connecting external editor (become server/engine via e.g. socket)
-	// TODO: [LATER] become pluggable into http://luna-lang.org
-	// TODO: [LATER][MAYBE] allow "plugins" ("combos" - commands with default options) e.g. for Lua `lua -e`+auto-quote, etc.
-	// TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
-	// TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux, up-for-grabs.net; data exploration? data science?
+	w, h := tui.Size()
+	drawch := func(x, y int, ch rune) {
+		if x <= v.X && v.X != 0 {
+			x, ch = 0, '«'
+		} else {
+			x -= v.X
+		}
+		if x >= w {
+			x, ch = w-1, '»'
+		}
+		tui.SetCell(x, y, tcell.StyleDefault, ch)
+	}
+	endline := func(x, y int) {
+		x -= v.X
+		if x < 0 {
+			x = 0
+		}
+		for ; x < w; x++ {
+			tui.SetCell(x, y, tcell.StyleDefault, ' ')
+		}
+	}
+
+	x, y := 0, v.ScreenY
+	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
+	for len(buf) > 0 && y < h {
+		ch, sz := utf8.DecodeRune(buf)
+		buf = buf[sz:]
+		switch ch {
+		case '\n':
+			endline(x, y)
+			x, y = 0, y+1
+			continue
+		case '\t':
+			const tabwidth = 8
+			drawch(x, y, ' ')
+			for x%tabwidth < (tabwidth - 1) {
+				x++
+				if x >= w {
+					break
+				}
+				drawch(x, y, ' ')
+			}
+		default:
+			drawch(x, y, ch)
+		}
+		x++
+	}
+	for ; y < h; y++ {
+		endline(0, y)
+	}
+}
+
+func (v *BufView) HandleKey(ev *tcell.EventKey) bool {
+	const scrollX = 8 // When user scrolls horizontally, move by this many characters
+	switch getKey(ev) {
+	//
+	// Vertical scrolling
+	//
+	case key(tcell.KeyUp):
+		v.Y--
+		v.normalizeY()
+	case key(tcell.KeyDown):
+		v.Y++
+		v.normalizeY()
+	case key(tcell.KeyPgDn):
+		// TODO: in top-right corner of Buf area, draw current line number & total # of lines
+		v.Y += v.H - 1
+		v.normalizeY()
+	case key(tcell.KeyPgUp):
+		v.Y -= v.H - 1
+		v.normalizeY()
+	//
+	// Horizontal scrolling
+	//
+	case altKey(tcell.KeyLeft),
+		ctrlKey(tcell.KeyLeft):
+		v.X -= scrollX
+		if v.X < 0 {
+			v.X = 0
+		}
+	case altKey(tcell.KeyRight),
+		ctrlKey(tcell.KeyRight):
+		v.X += scrollX
+	case altKey(tcell.KeyHome),
+		ctrlKey(tcell.KeyHome):
+		v.X = 0
+	default:
+		// Unknown key/combination, not handled
+		return false
+	}
+	return true
+}
+
+func (v *BufView) normalizeY() {
+	nlines := bytes.Count(v.Buf.Snapshot(), []byte{'\n'}) + 1
+	if v.Y >= nlines {
+		v.Y = nlines - 1
+	}
+	if v.Y < 0 {
+		v.Y = 0
+	}
+}
+
+func NewBuf() *Buf {
+	// TODO: make buffer size dynamic (growable by pressing a key)
+	const bufsize = 40 * 1024 * 1024 // 40 MB
+	buf := &Buf{bytes: make([]byte, bufsize)}
+	buf.cond = sync.NewCond(&buf.mu)
+	return buf
 }
 
 type Buf struct {
@@ -188,19 +403,17 @@ type Buf struct {
 
 	mu   sync.Mutex // guards the following fields
 	cond *sync.Cond
-	// NOTE: n and eof can be written only by Collect
+	// NOTE: n and eof can be written only by capture func
 	n   int
 	eof bool
 }
 
-func NewBuf() *Buf {
-	const bufsize = 40 * 1024 * 1024 // 40 MB
-	buf := &Buf{bytes: make([]byte, bufsize)}
-	buf.cond = sync.NewCond(&buf.mu)
-	return buf
+func (b *Buf) StartCapturing(r io.Reader, notify func()) *Buf {
+	go b.capture(r, notify)
+	return b
 }
 
-func (b *Buf) Collect(r io.Reader, signal func()) {
+func (b *Buf) capture(r io.Reader, notify func()) {
 	// TODO: allow stopping - take context?
 	for {
 		n, err := r.Read(b.bytes[b.n:])
@@ -211,7 +424,7 @@ func (b *Buf) Collect(r io.Reader, signal func()) {
 		}
 		b.cond.Broadcast()
 		b.mu.Unlock()
-		go signal()
+		go notify()
 		if err == io.EOF {
 			return
 		} else if err != nil {
@@ -224,77 +437,10 @@ func (b *Buf) Collect(r io.Reader, signal func()) {
 	}
 }
 
-func (b *Buf) Draw(tui tcell.Screen, y0 int, view BufView) {
+func (b *Buf) Snapshot() []byte {
 	b.mu.Lock()
-	buf := b.bytes[:b.n]
-	b.mu.Unlock()
-
-	// PgDn/PgUp etc. support
-	for ; view.Y > 0; view.Y-- {
-		newline := bytes.IndexByte(buf, '\n')
-		if newline != -1 {
-			buf = buf[newline+1:]
-		}
-	}
-
-	w, h := tui.Size()
-	putch := func(x, y int, ch rune) {
-		if x <= view.X && view.X != 0 {
-			x, ch = 0, '«'
-		} else {
-			x -= view.X
-		}
-		if x >= w {
-			x, ch = w-1, '»'
-		}
-		tui.SetCell(x, y, tcell.StyleDefault, ch)
-	}
-	endline := func(x, y int) {
-		x -= view.X
-		if x < 0 {
-			x = 0
-		}
-		for ; x < w; x++ {
-			tui.SetCell(x, y, tcell.StyleDefault, ' ')
-		}
-	}
-
-	x, y := 0, y0
-	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
-	for len(buf) > 0 && y < h {
-		ch, sz := utf8.DecodeRune(buf)
-		buf = buf[sz:]
-		switch ch {
-		case '\n':
-			endline(x, y)
-			x, y = 0, y+1
-			continue
-		case '\t':
-			const tabwidth = 8
-			putch(x, y, ' ')
-			for x%tabwidth < (tabwidth - 1) {
-				x++
-				if x >= w {
-					break
-				}
-				putch(x, y, ' ')
-			}
-		default:
-			putch(x, y, ch)
-		}
-		x++
-	}
-	for ; y < h; y++ {
-		endline(0, y)
-	}
-}
-
-func (b *Buf) Lines() int {
-	b.mu.Lock()
-	n := b.n
-	b.mu.Unlock()
-	newlines := bytes.Count(b.bytes[:n], []byte{'\n'})
-	return newlines + 1
+	defer b.mu.Unlock()
+	return b.bytes[:b.n]
 }
 
 func (b *Buf) NewReader() io.Reader {
@@ -323,110 +469,31 @@ type funcReader func([]byte) (int, error)
 
 func (f funcReader) Read(p []byte) (int, error) { return f(p) }
 
-type Editor struct {
-	prompt []rune
-	// TODO: make editor multiline. Reuse gocui or something for this?
-	// TODO: rename 'command' to 'data' or 'value' or something more generic
-	command []rune
-	cursor  int
-	// lastw is length of command on last Draw
-	lastw int
-}
-
-func NewEditor(prompt string) *Editor {
-	return &Editor{prompt: []rune(prompt)}
-}
-
-func (e *Editor) String() string {
-	return string(e.command)
-}
-
-func (e *Editor) Draw(tui tcell.Screen, x, y int, setcursor bool) {
-	promptStyle := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
-	for i, ch := range e.prompt {
-		tui.SetCell(x+i, y, promptStyle, ch)
-	}
-	for i, ch := range e.command {
-		tui.SetCell(x+len(e.prompt)+i, y, promptStyle, ch)
-	}
-	// clear remains of last command if needed
-	for i := len(e.command); i < e.lastw; i++ {
-		tui.SetCell(x+len(e.prompt)+i, y, tcell.StyleDefault, ' ')
-	}
-	if setcursor {
-		tui.ShowCursor(x+len(e.prompt)+e.cursor, y)
-	}
-	e.lastw = len(e.command)
-}
-
-func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
-	if ev.Key() == tcell.KeyRune && ev.Modifiers()&(^tcell.ModShift) == 0 {
-		e.insert(ev.Rune())
-		return true
-	}
-	switch (keymod{ev.Key(), ev.Modifiers()}) {
-	case keymod{tcell.KeyBackspace, 0}, keymod{tcell.KeyBackspace2, 0}:
-		// See https://github.com/nsf/termbox-go/issues/145
-		e.delete(-1)
-	case keymod{tcell.KeyDelete, 0}:
-		e.delete(0)
-	case keymod{tcell.KeyLeft, 0}:
-		if e.cursor > 0 {
-			e.cursor--
-		}
-	case keymod{tcell.KeyRight, 0}:
-		if e.cursor < len(e.command) {
-			e.cursor++
-		}
-	default:
-		return false
-	}
-	return true
-}
-
-func (e *Editor) insert(ch rune) {
-	// insert key into command (https://github.com/golang/go/wiki/SliceTricks#insert)
-	e.command = append(e.command, 0)
-	copy(e.command[e.cursor+1:], e.command[e.cursor:])
-	e.command[e.cursor] = ch
-	e.cursor++
-}
-
-func (e *Editor) delete(dx int) {
-	pos := e.cursor + dx
-	if pos < 0 || pos >= len(e.command) {
-		return
-	}
-	e.command = append(e.command[:pos], e.command[pos+1:]...)
-	e.cursor = pos
-}
-
 type Subprocess struct {
 	Buf    *Buf
 	cancel context.CancelFunc
 }
 
-func StartSubprocess(inputBuf *Buf, command string, signal func()) *Subprocess {
+func StartSubprocess(command string, stdin *Buf, notify func()) *Subprocess {
 	ctx, cancel := context.WithCancel(context.TODO())
-	s := &Subprocess{
-		Buf:    NewBuf(),
+	r, w := io.Pipe()
+	p := &Subprocess{
+		Buf:    NewBuf().StartCapturing(r, notify),
 		cancel: cancel,
 	}
-	r, w := io.Pipe()
-	go s.Buf.Collect(r, signal)
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	cmd.Stdout = w
 	cmd.Stderr = w
-	cmd.Stdin = inputBuf.NewReader()
+	cmd.Stdin = stdin.NewReader()
 	err := cmd.Start()
 	if err != nil {
 		fmt.Fprintf(w, "up: %s", err)
-		return s
+		return p
 	}
 	log.Println(cmd.Path)
 	go cmd.Wait()
-	return s
+	return p
 }
 
 func (s *Subprocess) Kill() {
@@ -436,25 +503,11 @@ func (s *Subprocess) Kill() {
 	s.cancel()
 }
 
-type BufView struct {
-	// TODO: Wrap bool
-	Y int // for pgup/pgdn scrolling)
-	X int // for left<->right scrolling
-}
+type key int32
 
-func (b *BufView) NormalizeY(nlines int) {
-	if b.Y >= nlines {
-		b.Y = nlines - 1
-	}
-	if b.Y < 0 {
-		b.Y = 0
-	}
-}
-
-type keymod struct {
-	tcell.Key
-	tcell.ModMask
-}
+func getKey(ev *tcell.EventKey) key { return key(ev.Modifiers())<<16 + key(ev.Key()) }
+func altKey(base tcell.Key) key     { return key(tcell.ModAlt)<<16 + key(base) }
+func ctrlKey(base tcell.Key) key    { return key(tcell.ModCtrl)<<16 + key(base) }
 
 func writeScript(command string, tui tcell.Screen) {
 	var f *os.File
