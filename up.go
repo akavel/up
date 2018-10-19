@@ -18,6 +18,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -27,7 +28,6 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell"
 	"github.com/mattn/go-isatty"
@@ -278,13 +278,21 @@ type BufView struct {
 }
 
 func (v *BufView) Draw(tui tcell.Screen) {
-	buf := v.Buf.Snapshot()
+	r := bufio.NewReader(v.Buf.NewReader(false))
 
 	// PgDn/PgUp etc. support
-	for ; v.Y > 0; v.Y-- {
-		newline := bytes.IndexByte(buf, '\n')
-		if newline != -1 {
-			buf = buf[newline+1:]
+	for y := v.Y; y > 0; y-- {
+		line, err := r.ReadBytes('\n')
+		switch err {
+		case nil:
+			// skip line
+			continue
+		case io.EOF:
+			r = bufio.NewReader(bytes.NewReader(line))
+			y = 0
+			break
+		default:
+			panic(err)
 		}
 	}
 
@@ -312,9 +320,13 @@ func (v *BufView) Draw(tui tcell.Screen) {
 
 	x, y := 0, v.ScreenY
 	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
-	for len(buf) > 0 && y < h {
-		ch, sz := utf8.DecodeRune(buf)
-		buf = buf[sz:]
+	for {
+		ch, _, err := r.ReadRune()
+		if y >= h || err == io.EOF {
+			break
+		} else if err != nil {
+			panic(err)
+		}
 		switch ch {
 		case '\n':
 			endline(x, y)
@@ -444,12 +456,12 @@ func (b *Buf) Snapshot() []byte {
 	return b.bytes[:b.n]
 }
 
-func (b *Buf) NewReader() io.Reader {
+func (b *Buf) NewReader(blocking bool) io.Reader {
 	i := 0
 	return funcReader(func(p []byte) (n int, err error) {
 		b.mu.Lock()
 		end := b.n
-		for end == i && !b.eof && end < len(b.bytes) {
+		for blocking && end == i && !b.eof && end < len(b.bytes) {
 			// TODO: don't return EOF if input is fully buffered? difficult choice :/
 			// FIXME: somehow let GC collect this goroutine if its caller is killed & GCed
 			// TODO: track leaking of these goroutines, see rsc's last hint in https://golang.org/issue/24696
@@ -486,7 +498,7 @@ func StartSubprocess(command string, stdin *Buf, notify func()) *Subprocess {
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	cmd.Stdout = w
 	cmd.Stderr = w
-	cmd.Stdin = stdin.NewReader()
+	cmd.Stdin = stdin.NewReader(true)
 	err := cmd.Start()
 	if err != nil {
 		fmt.Fprintf(w, "up: %s", err)
