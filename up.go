@@ -297,9 +297,11 @@ func (v *BufView) Draw(tui tcell.Screen) {
 	}
 
 	w, h := tui.Size()
+	lclip := false
 	drawch := func(x, y int, ch rune) {
 		if x <= v.X && v.X != 0 {
 			x, ch = 0, '«'
+			lclip = true
 		} else {
 			x -= v.X
 		}
@@ -313,6 +315,10 @@ func (v *BufView) Draw(tui tcell.Screen) {
 		if x < 0 {
 			x = 0
 		}
+		if x == 0 && lclip {
+			x++
+		}
+		lclip = false
 		for ; x < w; x++ {
 			tui.SetCell(x, y, tcell.StyleDefault, ' ')
 		}
