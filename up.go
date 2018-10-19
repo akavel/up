@@ -82,11 +82,11 @@ func main() {
 
 	// Initialize main data flow
 	var (
-		stdinCapture = NewBuf().StartCapturing(os.Stdin, func() {
-			// When some new data shows up on stdin, we raise a custom signal,
-			// so further down we will know to refresh commandOutput
-			tui.PostEvent(tcell.NewEventInterrupt(nil))
-		})
+		// We capture data piped to 'up' on standard input into an internal buffer
+		// When some new data shows up on stdin, we raise a custom signal,
+		// so that main loop will refresh the buffers and the output.
+		stdinCapture = NewBuf().StartCapturing(os.Stdin, func() { triggerRefresh(tui) })
+		// Then, we pass this data as input to a subprocess.
 		// Initially, no subprocess is running, as no command is entered yet
 		commandSubprocess *Subprocess = nil
 	)
@@ -102,10 +102,7 @@ func main() {
 		if command != lastCommand {
 			commandSubprocess.Kill()
 			if command != "" {
-				// TODO: wrap the PostEvent in some helper named func
-				commandSubprocess = StartSubprocess(command, stdinCapture, func() {
-					tui.PostEvent(tcell.NewEventInterrupt(nil))
-				})
+				commandSubprocess = StartSubprocess(command, stdinCapture, func() { triggerRefresh(tui) })
 				commandOutput.Buf = commandSubprocess.Buf
 			} else {
 				// If command is empty, show original input data again (~ equivalent of typing `cat`)
@@ -178,6 +175,10 @@ func initTUI() tcell.Screen {
 		die(err.Error())
 	}
 	return tui
+}
+
+func triggerRefresh(tui tcell.Screen) {
+	tui.PostEvent(tcell.NewEventInterrupt(nil))
 }
 
 func die(message string) {
