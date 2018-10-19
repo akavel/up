@@ -394,12 +394,23 @@ func (v *BufView) HandleKey(ev *tcell.EventKey) bool {
 }
 
 func (v *BufView) normalizeY() {
-	nlines := bytes.Count(v.Buf.Snapshot(), []byte{'\n'}) + 1
+	nlines := count(v.Buf.NewReader(false), '\n') + 1
 	if v.Y >= nlines {
 		v.Y = nlines - 1
 	}
 	if v.Y < 0 {
 		v.Y = 0
+	}
+}
+
+func count(r io.Reader, b byte) (n int) {
+	buf := [256]byte{}
+	for {
+		i, err := r.Read(buf[:])
+		n += bytes.Count(buf[:i], []byte{b})
+		if err != nil {
+			return
+		}
 	}
 }
 
@@ -448,12 +459,6 @@ func (b *Buf) capture(r io.Reader, notify func()) {
 			return
 		}
 	}
-}
-
-func (b *Buf) Snapshot() []byte {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.bytes[:b.n]
 }
 
 func (b *Buf) NewReader(blocking bool) io.Reader {
