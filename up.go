@@ -33,6 +33,16 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
+// TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
+// TODO: try to detect Ctrl-S and inject "fake EOF" into subprocess then; Ctrl-Q to disable it back
+// TODO: show help info; hide it after first keypress [or: show it right of prompt, scrolling away with each typed character]
+// TODO: show status infos:
+//  - "+" a.k.a. "more data" when input buffer is filled, but not yet EOFed
+//  - "~" a.k.a. "reading" when input buffer is not yet filled, nor EOFed
+//  - "!" a.k.a. "frozen" when Ctrl-S was pressed and fake EOF is injected into the input buffer
+//  - nothing when input buffer is filled and EOFed
+//  - red fg + "up: process returned with error code %d" -- when subprocess returned an error
+//  - yellow fg -- when process is still not finished
 // TODO: properly handle fully consumed buffers, to enable piping into `wc -l` or `uniq -c` etc.
 // TODO: readme, asciinema
 // TODO: on github: add issues, incl. up-for-grabs / help-wanted
