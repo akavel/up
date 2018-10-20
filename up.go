@@ -35,7 +35,6 @@ import (
 
 // TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
 // TODO: try to detect Ctrl-S and inject "fake EOF" into subprocess then; Ctrl-Q to disable it back
-// TODO: show help info; hide it after first keypress [or: show it right of prompt, scrolling away with each typed character]
 // TODO: show status infos:
 //  - "+" a.k.a. "more data" when input buffer is filled, but not yet EOFed
 //  - "~" a.k.a. "reading" when input buffer is not yet filled, nor EOFed
@@ -79,13 +78,15 @@ func main() {
 	tui := initTUI()
 	defer tui.Fini()
 
-	// Initialize 2 main UI parts
+	// Initialize 3 main UI parts
 	var (
 		// The top line of the TUI is an editable command, which will be used
 		// as a pipeline for data we read from stdin
 		commandEditor = NewEditor("| ")
 		// The rest of the screen is a view of the results of the command
 		commandOutput = BufView{}
+		// Sometimes, a message may be displayed at the bottom of the screen, with help or other info
+		message = `^X exit (^C nosave)  PgUp/PgDn/Up/Dn/^</^> scroll  [Ultimate Plumber v0.1 by akavel]`
 	)
 
 	// Initialize main data flow
@@ -126,6 +127,7 @@ func main() {
 		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1),
 			func(x, y int) { tui.ShowCursor(x+1, 0) })
 		commandOutput.DrawTo(TuiRegion(tui, 0, 1, w, h-1))
+		drawText(TuiRegion(tui, 0, h-1, w, 1), whiteOnBlue, message)
 		tui.Show()
 
 		// Handle UI events
@@ -134,10 +136,12 @@ func main() {
 		case *tcell.EventKey:
 			// Is it a command editor key?
 			if commandEditor.HandleKey(ev) {
+				message = ""
 				continue
 			}
 			// Is it a command output view key?
 			if commandOutput.HandleKey(ev, h-1) {
+				message = ""
 				continue
 			}
 			// Some other global key combinations
@@ -611,3 +615,9 @@ func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
 var (
 	whiteOnBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
 )
+
+func drawText(region Region, style tcell.Style, text string) {
+	for x, ch := range text {
+		region.SetCell(x, 0, style, ch)
+	}
+}
