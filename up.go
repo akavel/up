@@ -584,7 +584,13 @@ func StartSubprocess(command string, stdin *Buf, notify func()) *Subprocess {
 		return p
 	}
 	log.Println(cmd.Path)
-	go cmd.Wait()
+	go func() {
+		err = cmd.Wait()
+		if err != nil {
+			fmt.Fprintf(w, "up: %s", err)
+		}
+		w.Close()
+	}()
 	return p
 }
 
