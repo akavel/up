@@ -34,21 +34,14 @@ import (
 )
 
 // TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
-// TODO: try to detect Ctrl-S and inject "fake EOF" into subprocess then; Ctrl-Q to disable it back
 // TODO: show status infos:
-//  - "+" a.k.a. "more data" when input buffer is filled, but not yet EOFed
-//  - "~" a.k.a. "reading" when input buffer is not yet filled, nor EOFed
-//  - "!" a.k.a. "frozen" when Ctrl-S was pressed and fake EOF is injected into the input buffer
-//  - nothing when input buffer is filled and EOFed
 //  - red fg + "up: process returned with error code %d" -- when subprocess returned an error
 //  - yellow fg -- when process is still not finished
-// TODO: properly handle fully consumed buffers, to enable piping into `wc -l` or `uniq -c` etc.
 // TODO: readme, asciinema
 // TODO: on github: add issues, incl. up-for-grabs / help-wanted
 // TODO: [LATER] make it work on Windows; maybe with mattn/go-shellwords ?
 // TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 // TODO: properly show all licenses of dependencies on --version
-// TODO: [LATER] allow increasing size of input buffer with some key
 // TODO: [LATER] on ^X, leave TUI and run the command through buffered input, then unpause rest of input
 // TODO: [LATER] allow adding more elements of pipeline (initially, just writing `foo | bar` should work)
 // TODO: [LATER] allow invocation with partial command, like: `up grep -i`
@@ -61,9 +54,7 @@ import (
 // TODO: [LATER] richer TUI:
 // - show # of read lines & kbytes
 // - show status (errorlevel) of process, or that it's still running (also with background colors)
-// - show if we've read whole stdin, or it's still not EOF
 // - allow copying and pasting to/from command line
-// - show help by default, including key to disable it (F1, Alt-h)
 // TODO: [LATER] allow connecting external editor (become server/engine via e.g. socket)
 // TODO: [LATER] become pluggable into http://luna-lang.org
 // TODO: [LATER][MAYBE] allow "plugins" ("combos" - commands with default options) e.g. for Lua `lua -e`+auto-quote, etc.
@@ -155,7 +146,9 @@ func main() {
 				stdinCapture.Pause(false)
 				lastCommand = ":" // Make sure we restart current command
 			case key(tcell.KeyCtrlC),
-				ctrlKey(tcell.KeyCtrlC):
+				ctrlKey(tcell.KeyCtrlC),
+				key(tcell.KeyCtrlD),
+				ctrlKey(tcell.KeyCtrlD):
 				// Quit
 				// TODO: print the command in case user did this accidentally
 				return
