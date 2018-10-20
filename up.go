@@ -492,6 +492,7 @@ func (b *Buf) capture(r io.Reader, notify func()) {
 
 		go notify()
 		if err == io.EOF {
+			log.Printf("capture EOF after: %q", b.bytes[:b.n]) // TODO: make sure no race here, and skipped if not debugging
 			return
 		} else if err != nil {
 			// TODO: better handling of errors
@@ -541,17 +542,19 @@ func (b *Buf) NewReader(blocking bool) io.Reader {
 		b.mu.Lock()
 		end := b.n
 		for blocking && end == i && b.status == bufReading && end < len(b.bytes) {
-			// TODO: don't return EOF if input is fully buffered? difficult choice :/
-			// FIXME: somehow let GC collect this goroutine if its caller is killed & GCed
-			// TODO: track leaking of these goroutines, see rsc's last hint in https://golang.org/issue/24696
 			b.cond.Wait()
+			end = b.n
 		}
 		b.mu.Unlock()
+
 		n = copy(p, b.bytes[i:end])
 		i += n
 		if n > 0 {
 			return n, nil
 		} else {
+			if blocking {
+				log.Printf("blocking reader emitting EOF after: %q", b.bytes[:end])
+			}
 			return 0, io.EOF
 		}
 	})
@@ -581,6 +584,7 @@ func StartSubprocess(command string, stdin *Buf, notify func()) *Subprocess {
 	err := cmd.Start()
 	if err != nil {
 		fmt.Fprintf(w, "up: %s", err)
+		w.Close()
 		return p
 	}
 	log.Println(cmd.Path)
