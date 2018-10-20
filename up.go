@@ -122,10 +122,10 @@ func main() {
 
 		// Draw UI
 		w, h := tui.Size()
-		region := TuiRegion(tui, 0, 0, w, 1)
-		commandEditor.DrawTo(region, func(x, y int) { tui.ShowCursor(x, 0) })
-		region = TuiRegion(tui, 0, 1, w, h-1)
-		commandOutput.DrawTo(region)
+		stdinCapture.DrawStatus(TuiRegion(tui, 0, 0, 1, 1))
+		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1),
+			func(x, y int) { tui.ShowCursor(x+1, 0) })
+		commandOutput.DrawTo(TuiRegion(tui, 0, 1, w, h-1))
 		tui.Show()
 
 		// Handle UI events
@@ -214,7 +214,7 @@ func (e *Editor) String() string { return string(e.value) }
 
 func (e *Editor) DrawTo(region Region, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
-	style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
+	style := whiteOnBlue
 	for i, ch := range e.prompt {
 		region.SetCell(i, 0, style, ch)
 	}
@@ -475,6 +475,27 @@ func (b *Buf) capture(r io.Reader, notify func()) {
 	}
 }
 
+func (b *Buf) DrawStatus(region Region) {
+	status := '+'
+
+	b.mu.Lock()
+	switch {
+	case b.eof:
+		status = ' '
+	case b.n == len(b.bytes):
+		status = '~'
+	}
+	b.mu.Unlock()
+
+	region.SetCell(0, 0, whiteOnBlue, status)
+}
+
+func (b *Buf) EOF() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.eof
+}
+
 func (b *Buf) NewReader(blocking bool) io.Reader {
 	i := 0
 	return funcReader(func(p []byte) (n int, err error) {
@@ -586,3 +607,7 @@ func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
 		},
 	}
 }
+
+var (
+	whiteOnBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
+)
