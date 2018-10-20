@@ -86,7 +86,7 @@ func main() {
 		// The rest of the screen is a view of the results of the command
 		commandOutput = BufView{}
 		// Sometimes, a message may be displayed at the bottom of the screen, with help or other info
-		message = `^X exit (^C nosave)  PgUp/PgDn/Up/Dn/^</^> scroll  [Ultimate Plumber v0.1 by akavel]`
+		message = `^X exit (^C nosave)  PgUp/PgDn/Up/Dn/^</^> scroll  ^S pause (^Q end)  [Ultimate Plumber v0.1 by akavel]`
 	)
 
 	// Initialize main data flow
@@ -146,6 +146,14 @@ func main() {
 			}
 			// Some other global key combinations
 			switch getKey(ev) {
+			case key(tcell.KeyCtrlS),
+				ctrlKey(tcell.KeyCtrlS):
+				stdinCapture.Pause(true)
+				triggerRefresh(tui)
+			case key(tcell.KeyCtrlQ),
+				ctrlKey(tcell.KeyCtrlQ):
+				stdinCapture.Pause(false)
+				lastCommand = ":" // Make sure we restart current command
 			case key(tcell.KeyCtrlC),
 				ctrlKey(tcell.KeyCtrlC):
 				// Quit
@@ -443,12 +451,19 @@ func NewBuf() *Buf {
 type Buf struct {
 	bytes []byte
 
-	mu   sync.Mutex // guards the following fields
-	cond *sync.Cond
-	// NOTE: n and eof can be written only by capture func
-	n   int
-	eof bool
+	mu     sync.Mutex // guards the following fields
+	cond   *sync.Cond
+	status bufStatus
+	n      int
 }
+
+type bufStatus int
+
+const (
+	bufReading bufStatus = iota
+	bufEOF
+	bufPaused
+)
 
 func (b *Buf) StartCapturing(r io.Reader, notify func()) *Buf {
 	go b.capture(r, notify)
@@ -459,13 +474,22 @@ func (b *Buf) capture(r io.Reader, notify func()) {
 	// TODO: allow stopping - take context?
 	for {
 		n, err := r.Read(b.bytes[b.n:])
+
 		b.mu.Lock()
+		for b.status == bufPaused {
+			b.cond.Wait()
+		}
 		b.n += n
 		if err == io.EOF {
-			b.eof = true
+			b.status = bufEOF
+		}
+		if b.n == len(b.bytes) {
+			// TODO: remove this when we can grow the buffer
+			err = io.EOF
 		}
 		b.cond.Broadcast()
 		b.mu.Unlock()
+
 		go notify()
 		if err == io.EOF {
 			return
@@ -473,31 +497,42 @@ func (b *Buf) capture(r io.Reader, notify func()) {
 			// TODO: better handling of errors
 			panic(err)
 		}
-		if b.n == len(b.bytes) {
-			return
-		}
 	}
 }
 
+func (b *Buf) Pause(pause bool) {
+	b.mu.Lock()
+	if pause {
+		if b.status == bufReading {
+			b.status = bufPaused
+			// trigger all readers to emit fake EOF
+			b.cond.Broadcast()
+		}
+	} else {
+		if b.status == bufPaused {
+			b.status = bufReading
+			// wake up the capture func
+			b.cond.Broadcast()
+		}
+	}
+	b.mu.Unlock()
+}
+
 func (b *Buf) DrawStatus(region Region) {
-	status := '+'
+	status := '~' // default: still reading input
 
 	b.mu.Lock()
 	switch {
-	case b.eof:
-		status = ' '
+	case b.status == bufPaused:
+		status = '#'
+	case b.status == bufEOF:
+		status = ' ' // all input read, nothing more to do
 	case b.n == len(b.bytes):
-		status = '~'
+		status = '+' // buffer full
 	}
 	b.mu.Unlock()
 
 	region.SetCell(0, 0, whiteOnBlue, status)
-}
-
-func (b *Buf) EOF() bool {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.eof
 }
 
 func (b *Buf) NewReader(blocking bool) io.Reader {
@@ -505,7 +540,7 @@ func (b *Buf) NewReader(blocking bool) io.Reader {
 	return funcReader(func(p []byte) (n int, err error) {
 		b.mu.Lock()
 		end := b.n
-		for blocking && end == i && !b.eof && end < len(b.bytes) {
+		for blocking && end == i && b.status != bufEOF && end < len(b.bytes) {
 			// TODO: don't return EOF if input is fully buffered? difficult choice :/
 			// FIXME: somehow let GC collect this goroutine if its caller is killed & GCed
 			// TODO: track leaking of these goroutines, see rsc's last hint in https://golang.org/issue/24696
