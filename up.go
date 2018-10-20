@@ -540,7 +540,7 @@ func (b *Buf) NewReader(blocking bool) io.Reader {
 	return funcReader(func(p []byte) (n int, err error) {
 		b.mu.Lock()
 		end := b.n
-		for blocking && end == i && b.status != bufEOF && end < len(b.bytes) {
+		for blocking && end == i && b.status == bufReading && end < len(b.bytes) {
 			// TODO: don't return EOF if input is fully buffered? difficult choice :/
 			// FIXME: somehow let GC collect this goroutine if its caller is killed & GCed
 			// TODO: track leaking of these goroutines, see rsc's last hint in https://golang.org/issue/24696
