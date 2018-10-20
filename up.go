@@ -85,10 +85,8 @@ func main() {
 		// as a pipeline for data we read from stdin
 		commandEditor = NewEditor("| ")
 		// The rest of the screen is a view of the results of the command
-		commandOutput = BufView{ScreenY: 1}
+		commandOutput = BufView{}
 	)
-	_, screenH := tui.Size()
-	commandOutput.H = screenH - commandOutput.ScreenY
 
 	// Initialize main data flow
 	var (
@@ -123,8 +121,11 @@ func main() {
 		lastCommand = command
 
 		// Draw UI
-		commandEditor.Draw(tui, 0, 0, true)
-		commandOutput.Draw(tui)
+		w, h := tui.Size()
+		region := TuiRegion(tui, 0, 0, w, 1)
+		commandEditor.DrawTo(region, func(x, y int) { tui.ShowCursor(x, 0) })
+		region = TuiRegion(tui, 0, 1, w, h-1)
+		commandOutput.DrawTo(region)
 		tui.Show()
 
 		// Handle UI events
@@ -136,7 +137,7 @@ func main() {
 				continue
 			}
 			// Is it a command output view key?
-			if commandOutput.HandleKey(ev) {
+			if commandOutput.HandleKey(ev, h-1) {
 				continue
 			}
 			// Some other global key combinations
@@ -211,25 +212,25 @@ type Editor struct {
 
 func (e *Editor) String() string { return string(e.value) }
 
-func (e *Editor) Draw(tui tcell.Screen, x, y int, setcursor bool) {
+func (e *Editor) DrawTo(region Region, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
 	style := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
 	for i, ch := range e.prompt {
-		tui.SetCell(x+i, y, style, ch)
+		region.SetCell(i, 0, style, ch)
 	}
 	for i, ch := range e.value {
-		tui.SetCell(x+len(e.prompt)+i, y, style, ch)
+		region.SetCell(len(e.prompt)+i, 0, style, ch)
 	}
 
 	// Clear remains of last value if needed
 	for i := len(e.value); i < e.lastw; i++ {
-		tui.SetCell(x+len(e.prompt)+i, y, tcell.StyleDefault, ' ')
+		region.SetCell(len(e.prompt)+i, 0, tcell.StyleDefault, ' ')
 	}
 	e.lastw = len(e.value)
 
 	// Show cursor if requested
-	if setcursor {
-		tui.ShowCursor(x+len(e.prompt)+e.cursor, y)
+	if setcursor != nil {
+		setcursor(len(e.prompt)+e.cursor, 0)
 	}
 }
 
@@ -279,15 +280,13 @@ func (e *Editor) delete(dx int) {
 }
 
 type BufView struct {
-	ScreenY int // Y position of first drawn line on screen
-	H       int
 	// TODO: Wrap bool
 	Y   int // Y of the view in the Buf, for down/up scrolling
 	X   int // X of the view in the Buf, for left/right scrolling
 	Buf *Buf
 }
 
-func (v *BufView) Draw(tui tcell.Screen) {
+func (v *BufView) DrawTo(region Region) {
 	r := bufio.NewReader(v.Buf.NewReader(false))
 
 	// PgDn/PgUp etc. support
@@ -306,7 +305,6 @@ func (v *BufView) Draw(tui tcell.Screen) {
 		}
 	}
 
-	w, h := tui.Size()
 	lclip := false
 	drawch := func(x, y int, ch rune) {
 		if x <= v.X && v.X != 0 {
@@ -315,10 +313,10 @@ func (v *BufView) Draw(tui tcell.Screen) {
 		} else {
 			x -= v.X
 		}
-		if x >= w {
-			x, ch = w-1, '»'
+		if x >= region.W {
+			x, ch = region.W-1, '»'
 		}
-		tui.SetCell(x, y, tcell.StyleDefault, ch)
+		region.SetCell(x, y, tcell.StyleDefault, ch)
 	}
 	endline := func(x, y int) {
 		x -= v.X
@@ -329,16 +327,16 @@ func (v *BufView) Draw(tui tcell.Screen) {
 			x++
 		}
 		lclip = false
-		for ; x < w; x++ {
-			tui.SetCell(x, y, tcell.StyleDefault, ' ')
+		for ; x < region.W; x++ {
+			region.SetCell(x, y, tcell.StyleDefault, ' ')
 		}
 	}
 
-	x, y := 0, v.ScreenY
+	x, y := 0, 0
 	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
 	for {
 		ch, _, err := r.ReadRune()
-		if y >= h || err == io.EOF {
+		if y >= region.H || err == io.EOF {
 			break
 		} else if err != nil {
 			panic(err)
@@ -353,7 +351,7 @@ func (v *BufView) Draw(tui tcell.Screen) {
 			drawch(x, y, ' ')
 			for x%tabwidth < (tabwidth - 1) {
 				x++
-				if x >= w {
+				if x >= region.W {
 					break
 				}
 				drawch(x, y, ' ')
@@ -363,12 +361,12 @@ func (v *BufView) Draw(tui tcell.Screen) {
 		}
 		x++
 	}
-	for ; y < h; y++ {
+	for ; y < region.H; y++ {
 		endline(0, y)
 	}
 }
 
-func (v *BufView) HandleKey(ev *tcell.EventKey) bool {
+func (v *BufView) HandleKey(ev *tcell.EventKey, scrollY int) bool {
 	const scrollX = 8 // When user scrolls horizontally, move by this many characters
 	switch getKey(ev) {
 	//
@@ -382,10 +380,10 @@ func (v *BufView) HandleKey(ev *tcell.EventKey) bool {
 		v.normalizeY()
 	case key(tcell.KeyPgDn):
 		// TODO: in top-right corner of Buf area, draw current line number & total # of lines
-		v.Y += v.H - 1
+		v.Y += scrollY
 		v.normalizeY()
 	case key(tcell.KeyPgUp):
-		v.Y -= v.H - 1
+		v.Y -= scrollY
 		v.normalizeY()
 	//
 	// Horizontal scrolling
@@ -571,4 +569,20 @@ func writeScript(command string, tui tcell.Screen) {
 	}
 	tui.Fini()
 	fmt.Printf("up: command written to: %s\n", f.Name())
+}
+
+type Region struct {
+	W, H    int
+	SetCell func(x, y int, style tcell.Style, ch rune)
+}
+
+func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
+	return Region{
+		W: w, H: h,
+		SetCell: func(dx, dy int, style tcell.Style, ch rune) {
+			if dx >= 0 && dx < w && dy >= 0 && dy < h {
+				tui.SetCell(x+dx, y+dy, style, ch)
+			}
+		},
+	}
 }
