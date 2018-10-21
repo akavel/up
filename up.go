@@ -367,7 +367,8 @@ func (v *BufView) DrawTo(region Region) {
 		x++
 	}
 	for ; y < region.H; y++ {
-		endline(0, y)
+		endline(x, y)
+		x = 0
 	}
 }
 
@@ -585,6 +586,7 @@ func StartSubprocess(command string, stdin *Buf, notify func()) *Subprocess {
 		err = cmd.Wait()
 		if err != nil {
 			fmt.Fprintf(w, "up: %s", err)
+			log.Printf("Wait returned error: %s", err)
 		}
 		w.Close()
 	}()
