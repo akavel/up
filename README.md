@@ -8,7 +8,7 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 `cut`, `paste`, `awk`, `wc`, `perl`, etc., etc., by providing a quick,
 **interactive, scrollable preview** of their results.
 
-![](up.gif)
+[![](up.gif)](https://asciinema.org/a/208091)
 
 **[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.1/up)**
 
@@ -100,3 +100,5 @@ Future Ideas:
   but at this time it's purely a hobby project, with all the fun and risks this
   entails.
 
+— *Mateusz Czapliński*  
+*October 2018*
