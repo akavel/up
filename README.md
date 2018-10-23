@@ -10,6 +10,8 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 
 ![](up.gif)
 
+**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.1/up)**
+
 To start using **up**, redirect any text-emitting command (or pipeline) into it
 — for example:
 
