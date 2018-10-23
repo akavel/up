@@ -12,6 +12,8 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 
 [![](up.gif)](https://asciinema.org/a/208091)
 
+## Usage
+
 **[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.1/up)**
 
 To start using **up**, redirect any text-emitting command (or pipeline) into it
@@ -52,7 +54,7 @@ then:
   but `grep`, `perl`, etc. may also show incomplete results). To unfreeze back,
   press ***Ctrl-Q***.
 
-Additional notes:
+## Additional Notes
 
 - The pipeline is passed verbatim to a `bash -c` command, so any bash-isms should work.
 - The input buffer of the Ultimate Plumber is currently fixed at **40 MB**. If
@@ -60,7 +62,7 @@ Additional notes:
   corner of the screen. (This is intended to be changed to a
   dynamically/manually growable buffer in a future version of *up*.)
 
-Future Ideas:
+## Future Ideas
 
 - This is version 0.1 of *the Ultimate Plumber*: a minimal viable product I was
   comfortable to release to the public, hoping it might be of use to some of
