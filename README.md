@@ -17,7 +17,8 @@ To start using **up**, redirect any text-emitting command (or pipeline) into it
 
 then:
 
-- use PgUp/PgDn and Ctrl-[←]/Ctrl-[→] for basic browsing through the command output;
+- use ***PgUp/PgDn*** and ***Ctrl-[←]/Ctrl-[→]*** for basic browsing through
+  the command output;
 - in the input box at the top of the screen, start **writing any bash
   pipeline**; the Ultimate Plumber will **execute the command as you type it**,
   and immediately show you the output of the pipeline in the **scrollable
@@ -36,16 +37,16 @@ then:
   `up1.sh` file** in the current working directory (or, if it already existed,
   `up2.sh`, etc., until 1000, based on [Shlemiel the Painter's
   algorithm](https://www.joelonsoftware.com/2001/12/11/back-to-basics/)).
-  Alternatively, you can press *Ctrl-C* to quit without saving.
+  Alternatively, you can press ***Ctrl-C*** to quit without saving.
 - If the command you piped into *up* is long-running (in such case you will see
   a tilde `~` indicator character in the top-left corner of the screen, meaning
-  that *up* is still waiting for more input), you may need to press *Ctrl-S* to
-  temporarily freeze *up*'s input buffer (a freeze will be indicated by a `#`
-  character in top-left corner), which will inject a fake EOF into the
-  pipeline; otherwise, some commands in the pipeline may not print anything,
-  waiting for full input (especially commands like `wc` or `sort`, but `grep`,
-  `perl`, etc. may also show incomplete results). To unfreeze back, press
-  *Ctrl-Q*.
+  that *up* is still waiting for more input), you may need to press
+  ***Ctrl-S*** to temporarily freeze *up*'s input buffer (a freeze will be
+  indicated by a `#` character in top-left corner), which will inject a fake
+  EOF into the pipeline; otherwise, some commands in the pipeline may not print
+  anything, waiting for full input (especially commands like `wc` or `sort`,
+  but `grep`, `perl`, etc. may also show incomplete results). To unfreeze back,
+  press ***Ctrl-Q***.
 
 Additional notes:
 
@@ -91,7 +92,6 @@ Future Ideas:
       pipelines, merging, feedback loops, and other mixing and matching (though
       I'd strongly prefer if [Luna](https://luna-lang.org) was to do it
       eventually).
-- I'm interested in a lot of possible further directions
 - If you are interested in financing my R&D work, contact me by email at:
   czapkofan@gmail.com, or [on keybase.io as akavel](https://keybase.io/akavel).
   I suppose I will probably be developing the Ultimate Plumber further anyway,
