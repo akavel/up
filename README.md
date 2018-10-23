@@ -1,3 +1,5 @@
+# up - the Ultimate Plumber
+
 **up** is the **Ultimate Plumber**, a tool for writing Linux pipes in a
 terminal-based UI interactively, with instant live preview of command results.
 
@@ -24,7 +26,7 @@ then:
 - in the input box at the top of the screen, start **writing any bash
   pipeline**; the Ultimate Plumber will **execute the command as you type it**,
   and immediately show you the output of the pipeline in the **scrollable
-  window** below (replacing any earlier contents);
+  window** below (replacing any earlier contents)
     - For example, you can try writing:
       `grep network -A2 | grep : | cut -d: -f2- | paste - -`
       — on my computer, the screen then shows the pipeline and a scrollable
