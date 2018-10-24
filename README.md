@@ -61,6 +61,18 @@ then:
   you reach this limit, a `+` character should get displayed in the top-left
   corner of the screen. (This is intended to be changed to a
   dynamically/manually growable buffer in a future version of *up*.)
+- **MacOSX support:** I don't have a Mac, thus I have no idea if it works on
+  one. You are welcome to try, and also to send PRs. If you're interested in
+  me providing some kind of official-like support for MacOSX, please consider
+  trying to find a way to send me some usable-enough Mac computer. Please note
+  I'm not trying to "take advantage" of you by this, as I'm actually not at all
+  interested in achieving a Mac otherwise. (Also, trying to commit to this kind
+  of support will be an extra burden and obligation on me. Knowing someone out
+  there cares enough to do a fancy physical gesture would really help alleviate
+  this.) If you're serious enough to consider this option, please contact me by
+  email (mailto:czapkofan@gmail.com) or keybase (https://keybase.io/akavel), so
+  that we could try to research possible ways to achieve this.
+  Thanks for understanding!
 - **Prior art:** I was surprised no one seemed to write a similar tool before,
   that I could find. It should have been possible to write this since the dawn
   of Unix already, or earlier! And indeed, after I announced *up*, I got enough
