@@ -21,7 +21,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,6 +28,8 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/gdamore/tcell"
 	"github.com/mattn/go-isatty"
@@ -64,20 +65,15 @@ import (
 
 // Flag Settings
 var (
-	debugMode bool
+	debugMode = flag.Bool("debug", false, "debug mode")
 )
-
-func init() {
-	flag.BoolVar(&debugMode, "debug", false, "debug mode")
-	flag.BoolVar(&debugMode, "d", false, "debug mode (shorthand)")
-}
 
 func main() {
 	// Handle command-line flags
 	flag.Parse()
 
 	log.SetOutput(ioutil.Discard)
-	if debugMode {
+	if *debugMode {
 		debug, err := os.Create("up.debug")
 		if err != nil {
 			die(err.Error())
@@ -180,10 +176,6 @@ func main() {
 			}
 		}
 	}
-}
-
-func parseFlags() {
-
 }
 
 func initTUI() tcell.Screen {
