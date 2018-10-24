@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -61,9 +62,28 @@ import (
 // TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
 // TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux, up-for-grabs.net; data exploration? data science?
 
+// Flag Settings
+var (
+	debugMode bool
+)
+
+func init() {
+	flag.BoolVar(&debugMode, "debug", false, "debug mode")
+	flag.BoolVar(&debugMode, "d", false, "debug mode (shorthand)")
+}
+
 func main() {
 	// Handle command-line flags
-	parseFlags()
+	flag.Parse()
+
+	log.SetOutput(ioutil.Discard)
+	if debugMode {
+		debug, err := os.Create("up.debug")
+		if err != nil {
+			die(err.Error())
+		}
+		log.SetOutput(debug)
+	}
 
 	// Initialize TUI infrastructure
 	tui := initTUI()
@@ -163,14 +183,7 @@ func main() {
 }
 
 func parseFlags() {
-	log.SetOutput(ioutil.Discard)
-	if len(os.Args) > 1 && os.Args[1] == "--debug" {
-		debug, err := os.Create("up.debug")
-		if err != nil {
-			die(err.Error())
-		}
-		log.SetOutput(debug)
-	}
+
 }
 
 func initTUI() tcell.Screen {
