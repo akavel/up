@@ -42,9 +42,9 @@ then:
       In particular, writing "rm" or "dd" into it could be like running around
       with a chainsaw. But you'd be careful writing "rm" anywhere in Linux
       anyway, no? Also, why would you want to pipe something into "rm"? Other
-      than that, I don't really have good ideas how to protect against cases
+      than that, I don't really have good ideas on how to protect against cases
       like this. And in the other, non-dangerous cases, I find the tool
-      immensely useful. If you have some ideas how to
+      immensely useful. If you have some ideas on how to
       try to protect, [please share!](https://github.com/akavel/up/issues)
       That said, a tool wouldn't be really Unixy if you couldn't hurt yourself
       with it, right? ;P
@@ -100,7 +100,7 @@ then:
     - [RIIR](https://rust-lang.org) (once I learn enough of Rust... at some
       point in future... maybe...) — esp. to hopefully make *up* be a smaller
       binary (and also to maybe finally learn some Rust); though I'm somewhat
-      afraid if it might ossify the codbase and make harder to develop
+      afraid if it might ossify the codebase and make harder to develop
       further..? ...but maybe actually converse?...
     - Maybe it could be made into an UI-less, RPC/REST/socket/text-driven
       service, like gocode or [Language Servers](https://langserver.org/), for
@@ -126,7 +126,7 @@ then:
       pipelines, merging, feedback loops, and other mixing and matching (though
       I'd strongly prefer if [Luna](https://luna-lang.org) was to do it
       eventually).
-- If you are interested in financing my R&D work, contact me by email at:
+- If you are interested in financing my R&D work, contact me by email at
   czapkofan@gmail.com, or [on keybase.io as akavel](https://keybase.io/akavel).
   I suppose I will probably be developing the Ultimate Plumber further anyway,
   but at this time it's purely a hobby project, with all the fun and risks this
