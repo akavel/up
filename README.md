@@ -61,6 +61,12 @@ then:
   you reach this limit, a `+` character should get displayed in the top-left
   corner of the screen. (This is intended to be changed to a
   dynamically/manually growable buffer in a future version of *up*.)
+- **Prior art:** I was surprised no one seemed to write a similar tool before,
+  that I could find. It should have been possible to write this since the dawn
+  of Unix already, or earlier! And indeed, after I announced *up*, I got enough
+  publicity that my attention was directed to one such earlier project already:
+  **[Pipecut](http://pipecut.org/index.html)**. Looks interesting! You may like
+  to check it too! (Thanks [@TronDD](https://lobste.rs/s/acpz00/up_tool_for_writing_linux_pipes_with#c_qxrgoa).)
 
 ## Future Ideas
 
