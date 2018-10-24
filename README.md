@@ -38,12 +38,13 @@ then:
              Wireless interface      Centrino Advanced-N 6235
              Ethernet interface      RTL8111/8168/8411 PCI Express Gigabit Ethernet Controller
 
-    - **WARNING: Please think when using it!** In particular, writing "rm" or "dd"
-      into it could be like running around with a chainsaw. But you'd be careful
-      writing "rm" anywhere in Linux anyway, no? Also, why would you want to
-      pipe something into "rm"? Other than that, I don't really have good ideas
-      how to protect against cases like this. And in the other, non-dangerous
-      cases, I find the tool immensely useful. If you have some ideas how to
+    - **WARNING: Please be careful when using it! It could be dangerous.**
+      In particular, writing "rm" or "dd" into it could be like running around
+      with a chainsaw. But you'd be careful writing "rm" anywhere in Linux
+      anyway, no? Also, why would you want to pipe something into "rm"? Other
+      than that, I don't really have good ideas how to protect against cases
+      like this. And in the other, non-dangerous cases, I find the tool
+      immensely useful. If you have some ideas how to
       try to protect, [please share!](https://github.com/akavel/up/issues)
       That said, a tool wouldn't be really Unixy if you couldn't hurt yourself
       with it, right? ;P
