@@ -184,11 +184,11 @@ func initTUI() tcell.Screen {
 	// TODO: maybe try gocui or termbox?
 	tui, err := tcell.NewScreen()
 	if err != nil {
-		die(err.Error())
+		panic(err)
 	}
 	err = tui.Init()
 	if err != nil {
-		die(err.Error())
+		panic(err)
 	}
 	return tui
 }
