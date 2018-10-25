@@ -34,6 +34,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// TODO: [#4] in case of error, show it in red (bg?), then below show again initial normal output
+// TODO: F1 should display help, and it should be multi-line, and scrolling licensing credits
 // TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
 // TODO: show status infos:
 //  - red fg + "up: process returned with error code %d" -- when subprocess returned an error
@@ -156,6 +158,9 @@ func main() {
 			switch getKey(ev) {
 			case key(tcell.KeyEnter):
 				restart = true
+			case key(tcell.KeyCtrlUnderscore),
+				ctrlKey(tcell.KeyCtrlUnderscore):
+				// TODO: ask for another character to trigger command-line option, like in `less`
 
 			case key(tcell.KeyCtrlS),
 				ctrlKey(tcell.KeyCtrlS):
