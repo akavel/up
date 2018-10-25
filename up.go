@@ -167,7 +167,7 @@ func parseFlags() {
 	if len(os.Args) > 1 && os.Args[1] == "--debug" {
 		debug, err := os.Create("up.debug")
 		if err != nil {
-			die(err.Error())
+			panic(err)
 		}
 		log.SetOutput(debug)
 	}
