@@ -31,7 +31,7 @@ then:
   window** below (replacing any earlier contents)
     - For example, you can try writing:
       `grep network -A2 | grep : | cut -d: -f2- | paste - -`
-      — on my computer, the screen then shows the pipeline and a scrollable
+      — on your computer, the screen then shows the pipeline and a scrollable
       preview of its output like below:
 
              | grep network -A2 | grep : | cut -d: -f2- | paste - -
