@@ -100,7 +100,7 @@ then:
     - [RIIR](https://rust-lang.org) (once I learn enough of Rust... at some
       point in future... maybe...) — esp. to hopefully make *up* be a smaller
       binary (and also to maybe finally learn some Rust); though I'm somewhat
-      afraid if it might ossify the codbase and make harder to develop
+      afraid if it might ossify the codebase and make harder to develop
       further..? ...but maybe actually converse?...
     - Maybe it could be made into an UI-less, RPC/REST/socket/text-driven
       service, like gocode or [Language Servers](https://langserver.org/), for
