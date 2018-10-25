@@ -177,11 +177,14 @@ func main() {
 				key(tcell.KeyCtrlD),
 				ctrlKey(tcell.KeyCtrlD):
 				// Quit
-				// TODO: print the command in case user did this accidentally
+				tui.Fini()
+				os.Stderr.WriteString("up: Ultimate Plumber v" + version + " https://github.com/akavel/up\n")
+				os.Stderr.WriteString("up: | " + commandEditor.String() + "\n")
 				return
 			case key(tcell.KeyCtrlX),
 				ctrlKey(tcell.KeyCtrlX):
 				// Write script 'upN.sh' and quit
+				tui.Fini()
 				writeScript(commandEditor.String(), tui)
 				return
 			}
@@ -633,33 +636,63 @@ func altKey(base tcell.Key) key     { return key(tcell.ModAlt)<<16 + key(base) }
 func ctrlKey(base tcell.Key) key    { return key(tcell.ModCtrl)<<16 + key(base) }
 
 func writeScript(command string, tui tcell.Screen) {
+	os.Stderr.WriteString("up: Ultimate Plumber v" + version + " https://github.com/akavel/up\n")
+	os.Stderr.WriteString("up: writing: .")
 	var f *os.File
 	var err error
-	// TODO: if we hit loop end, panic with some message
 	for i := 1; i < 1000; i++ {
 		f, err = os.OpenFile(fmt.Sprintf("up%d.sh", i), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0755)
-		if err != nil {
-			if os.IsExist(err) {
-				continue
-			}
-			// FIXME: don't panic, instead show error and let user try to copy & paste visually
-			panic(err)
-		} else {
-			break
+		switch {
+		case os.IsExist(err):
+			continue
+		case err != nil:
+			goto fallback_tmp
+		default:
+			os.Stderr.WriteString("/" + f.Name())
+			goto try_file
 		}
 	}
+	os.Stderr.WriteString(" - error: up1.sh-up999.sh already exist\n")
+	goto fallback_tmp
+
+try_file:
 	_, err = fmt.Fprintf(f, "#!/bin/bash\n%s\n", command)
 	if err != nil {
-		// FIXME: don't panic, instead show error and let user try to copy & paste visually
-		panic(err)
+		goto fallback_tmp
 	}
 	err = f.Close()
 	if err != nil {
-		// FIXME: don't panic, instead show error and let user try to copy & paste visually
-		panic(err)
+		goto fallback_tmp
 	}
-	tui.Fini()
-	fmt.Printf("up: command written to: %s\n", f.Name())
+	os.Stderr.WriteString(" - OK\n")
+	return
+
+fallback_tmp:
+	// TODO: test if the fallbacks etc. protections actually work
+	os.Stderr.WriteString(" - error: " + err.Error() + "\n")
+	f, err = ioutil.TempFile("", "up-*.sh")
+	if err != nil {
+		goto fallback_print
+	}
+	_, err = fmt.Fprintf(f, "#!/bin/bash\n%s\n", command)
+	if err != nil {
+		goto fallback_print
+	}
+	err = f.Close()
+	if err != nil {
+		goto fallback_print
+	}
+	os.Stderr.WriteString("up: writing: " + f.Name() + " - OK\n")
+	os.Chmod(f.Name(), 0755)
+	return
+
+fallback_print:
+	fname := "TMP"
+	if f != nil {
+		fname = f.Name()
+	}
+	os.Stderr.WriteString("up: writing: " + fname + " - error: " + err.Error() + "\n")
+	os.Stderr.WriteString("up: | " + command + "\n")
 }
 
 type Region struct {
