@@ -119,13 +119,17 @@ func main() {
 				commandOutput.Buf = stdinCapture
 			}
 			restart = false
+			lastCommand = command
 		}
-		lastCommand = command
 
 		// Draw UI
 		w, h := tui.Size()
-		stdinCapture.DrawStatus(TuiRegion(tui, 0, 0, 1, 1))
-		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1),
+		style := whiteOnBlue
+		if command == lastCommand {
+			style = whiteOnDBlue
+		}
+		stdinCapture.DrawStatus(TuiRegion(tui, 0, 0, 1, 1), style)
+		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1), style,
 			func(x, y int) { tui.ShowCursor(x+1, 0) })
 		commandOutput.DrawTo(TuiRegion(tui, 0, 1, w, h-1))
 		drawText(TuiRegion(tui, 0, h-1, w, 1), whiteOnBlue, message)
@@ -230,9 +234,8 @@ type Editor struct {
 
 func (e *Editor) String() string { return string(e.value) }
 
-func (e *Editor) DrawTo(region Region, setcursor func(x, y int)) {
+func (e *Editor) DrawTo(region Region, style tcell.Style, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
-	style := whiteOnBlue
 	for i, ch := range e.prompt {
 		region.SetCell(i, 0, style, ch)
 	}
@@ -526,7 +529,7 @@ func (b *Buf) Pause(pause bool) {
 	b.mu.Unlock()
 }
 
-func (b *Buf) DrawStatus(region Region) {
+func (b *Buf) DrawStatus(region Region, style tcell.Style) {
 	status := '~' // default: still reading input
 
 	b.mu.Lock()
@@ -540,7 +543,7 @@ func (b *Buf) DrawStatus(region Region) {
 	}
 	b.mu.Unlock()
 
-	region.SetCell(0, 0, whiteOnBlue, status)
+	region.SetCell(0, 0, style, status)
 }
 
 func (b *Buf) NewReader(blocking bool) io.Reader {
@@ -666,7 +669,16 @@ func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
 }
 
 var (
-	whiteOnBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
+	whiteOnBlue   = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
+	whiteOnDBlue  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
+	whiteOnBrown  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBrown)
+	yellowOnBlue  = tcell.StyleDefault.Foreground(tcell.ColorYellow).Background(tcell.ColorNavy)
+	blackOnBlue   = tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorLightSkyBlue)
+	whiteOnGreen  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorGreen)
+	whiteOnDGreen = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorDarkGreen)
+	blackOnYellow = tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorYellow)
+	blackOnWhite  = tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite)
+	blueOnWhite   = tcell.StyleDefault.Foreground(tcell.ColorDarkBlue).Background(tcell.ColorWhite)
 )
 
 func drawText(region Region, style tcell.Style, text string) {
