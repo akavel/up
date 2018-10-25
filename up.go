@@ -31,6 +31,7 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/mattn/go-isatty"
+	"github.com/spf13/pflag"
 )
 
 // TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
@@ -61,7 +62,14 @@ import (
 // TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
 // TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux, up-for-grabs.net; data exploration? data science?
 
+var (
+	// TODO: dangerous? immediate? raw? unsafe? ...
+	// FIXME(akavel): mark the unsafe mode vs. safe mode with some colour or status; also inform/mark what command's results are displayed...
+	unsafeMode = pflag.BoolP("unsafe", "U", false, "enable mode in which command is executed immediately after any change")
+)
+
 func main() {
+	pflag.Parse()
 	// Handle command-line flags
 	parseFlags()
 
@@ -95,11 +103,12 @@ func main() {
 
 	// Main loop
 	lastCommand := ""
+	restart := false
 	for {
 		// If user edited the command, immediately run it in background, and
 		// kill the previously running command.
 		command := commandEditor.String()
-		if command != lastCommand {
+		if restart || (*unsafeMode && command != lastCommand) {
 			commandSubprocess.Kill()
 			if command != "" {
 				commandSubprocess = StartSubprocess(command, stdinCapture, func() { triggerRefresh(tui) })
@@ -109,6 +118,7 @@ func main() {
 				commandSubprocess = nil
 				commandOutput.Buf = stdinCapture
 			}
+			restart = false
 		}
 		lastCommand = command
 
@@ -137,6 +147,9 @@ func main() {
 			}
 			// Some other global key combinations
 			switch getKey(ev) {
+			case key(tcell.KeyEnter):
+				restart = true
+
 			case key(tcell.KeyCtrlS),
 				ctrlKey(tcell.KeyCtrlS):
 				stdinCapture.Pause(true)
