@@ -14,7 +14,12 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 
 ## Usage
 
+
 **[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.1/up)**
+
+If you ars using Archlinux,you can use this command to install
+
+    yaourt -S go-up
 
 To start using **up**, redirect any text-emitting command (or pipeline) into it
 — for example:
