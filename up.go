@@ -34,7 +34,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const version = "0.2 (2018-10-25)"
+const version = "0.2.1 (2018-10-25)"
 
 // TODO: [#4] in case of error, show it in red (bg?), then below show again initial normal output
 // TODO: F1 should display help, and it should be multi-line, and scrolling licensing credits
@@ -181,7 +181,7 @@ func main() {
 			case key(tcell.KeyCtrlQ),
 				ctrlKey(tcell.KeyCtrlQ):
 				stdinCapture.Pause(false)
-				lastCommand = ":" // Make sure we restart current command
+				restart = true
 			case key(tcell.KeyCtrlC),
 				ctrlKey(tcell.KeyCtrlC),
 				key(tcell.KeyCtrlD),
