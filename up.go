@@ -29,10 +29,9 @@ import (
 	"os/exec"
 	"sync"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/gdamore/tcell"
 	"github.com/mattn/go-isatty"
+	"github.com/spf13/pflag"
 )
 
 // TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
@@ -63,14 +62,13 @@ import (
 // TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
 // TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux, up-for-grabs.net; data exploration? data science?
 
-// Flag Settings
 var (
-	debugMode = flag.Bool("debug", false, "debug mode")
+	debugMode = pflag.Bool("debug", false, "debug mode")
 )
 
 func main() {
 	// Handle command-line flags
-	flag.Parse()
+	pflag.Parse()
 
 	log.SetOutput(ioutil.Discard)
 	if *debugMode {
