@@ -1,4 +1,4 @@
-// Copyright 2018 The up Authors
+// Copyright 2018 The up AUTHORS
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,12 +74,21 @@ var (
 	// FIXME(akavel): mark the unsafe mode vs. safe mode with some colour or status; also inform/mark what command's results are displayed...
 	unsafeMode   = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
 	outputScript = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
+	debugMode    = pflag.Bool("debug", false, "debug mode")
 )
 
 func main() {
-	pflag.Parse()
 	// Handle command-line flags
-	parseFlags()
+	pflag.Parse()
+
+	log.SetOutput(ioutil.Discard)
+	if *debugMode {
+		debug, err := os.Create("up.debug")
+		if err != nil {
+			die(err.Error())
+		}
+		log.SetOutput(debug)
+	}
 
 	// Initialize TUI infrastructure
 	tui := initTUI()
@@ -190,17 +199,6 @@ func main() {
 				return
 			}
 		}
-	}
-}
-
-func parseFlags() {
-	log.SetOutput(ioutil.Discard)
-	if len(os.Args) > 1 && os.Args[1] == "--debug" {
-		debug, err := os.Create("up.debug")
-		if err != nil {
-			die(err.Error())
-		}
-		log.SetOutput(debug)
 	}
 }
 
