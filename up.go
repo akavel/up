@@ -70,7 +70,7 @@ import (
 var (
 	// TODO: dangerous? immediate? raw? unsafe? ...
 	// FIXME(akavel): mark the unsafe mode vs. safe mode with some colour or status; also inform/mark what command's results are displayed...
-	unsafeMode = pflag.BoolP("unsafe", "U", false, "enable mode in which command is executed immediately after any change")
+	unsafeMode = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
 )
 
 func main() {
