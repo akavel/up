@@ -72,7 +72,8 @@ const version = "0.2 (2018-10-25)"
 var (
 	// TODO: dangerous? immediate? raw? unsafe? ...
 	// FIXME(akavel): mark the unsafe mode vs. safe mode with some colour or status; also inform/mark what command's results are displayed...
-	unsafeMode = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
+	unsafeMode   = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
+	outputScript = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
 )
 
 func main() {
@@ -637,9 +638,18 @@ func ctrlKey(base tcell.Key) key    { return key(tcell.ModCtrl)<<16 + key(base) 
 
 func writeScript(command string, tui tcell.Screen) {
 	os.Stderr.WriteString("up: Ultimate Plumber v" + version + " https://github.com/akavel/up\n")
-	os.Stderr.WriteString("up: writing: .")
 	var f *os.File
 	var err error
+	if *outputScript != "" {
+		os.Stderr.WriteString("up: writing " + *outputScript)
+		f, err = os.OpenFile(*outputScript, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+		if err != nil {
+			goto fallback_tmp
+		}
+		goto try_file
+	}
+
+	os.Stderr.WriteString("up: writing: .")
 	for i := 1; i < 1000; i++ {
 		f, err = os.OpenFile(fmt.Sprintf("up%d.sh", i), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0755)
 		switch {
