@@ -38,7 +38,6 @@ import (
 // TODO: show status infos:
 //  - red fg + "up: process returned with error code %d" -- when subprocess returned an error
 //  - yellow fg -- when process is still not finished
-// TODO: readme, asciinema
 // TODO: on github: add issues, incl. up-for-grabs / help-wanted
 // TODO: [LATER] make it work on Windows; maybe with mattn/go-shellwords ?
 // TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
@@ -47,7 +46,6 @@ import (
 // TODO: [LATER] allow adding more elements of pipeline (initially, just writing `foo | bar` should work)
 // TODO: [LATER] allow invocation with partial command, like: `up grep -i`
 // TODO: [LATER][MAYBE] allow reading upN.sh scripts
-// TODO: [LATER] auto-save and/or save on Ctrl-S or something
 // TODO: [MUCH LATER] readline-like rich editing support? and completion?
 // TODO: [MUCH LATER] integration with fzf? and pindexis/marker?
 // TODO: [LATER] forking and unforking pipelines
@@ -60,7 +58,12 @@ import (
 // TODO: [LATER] become pluggable into http://luna-lang.org
 // TODO: [LATER][MAYBE] allow "plugins" ("combos" - commands with default options) e.g. for Lua `lua -e`+auto-quote, etc.
 // TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
-// TODO: [LATER] advertise on: HN, r/programming, r/golang, r/commandline, r/linux, up-for-grabs.net; data exploration? data science?
+// TODO: [LATER] advertise on some reddits for data exploration / data science
+// TODO: [LATER] undo/redo - history of commands
+// TODO: [LATER] if writing upN.sh failed, write to $TMP/up.$RANDOM.sh (a.k.a. tempfile())
+// TODO: [LATER] jump between buffers saved from earlier pipe fragments; OR: allow saving/recalling "snapshots" of (cmd, results) pairs
+// TODO: [LATER] on ^C, print version & commandline on stderr
+// TODO: [LATER] ^-, U -- to switch to "unsafe mode"? -u to switch back? + some visual marker
 
 var (
 	// TODO: dangerous? immediate? raw? unsafe? ...
