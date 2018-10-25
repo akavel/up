@@ -34,6 +34,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const version = "0.2 (2018-10-25)"
+
 // TODO: [#4] in case of error, show it in red (bg?), then below show again initial normal output
 // TODO: F1 should display help, and it should be multi-line, and scrolling licensing credits
 // TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
@@ -90,7 +92,7 @@ func main() {
 		// The rest of the screen is a view of the results of the command
 		commandOutput = BufView{}
 		// Sometimes, a message may be displayed at the bottom of the screen, with help or other info
-		message = `^X exit (^C nosave)  PgUp/PgDn/Up/Dn/^</^> scroll  ^S pause (^Q end)  [Ultimate Plumber v0.1 by akavel]`
+		message = `^X exit (^C nosave)  PgUp/PgDn/Up/Dn/^</^> scroll  ^S pause (^Q end)  [Ultimate Plumber v` + version + ` by akavel]`
 	)
 
 	// Initialize main data flow
