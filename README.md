@@ -10,11 +10,11 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 `cut`, `paste`, `awk`, `wc`, `perl`, etc., etc., by providing a quick,
 **interactive, scrollable preview** of their results.
 
-[![](up.gif)](https://asciinema.org/a/208091)
+[![](up.gif)](https://asciinema.org/a/208538)
 
 ## Usage
 
-**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.1/up)**
+**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.2.1/up)**
 
 To start using **up**, redirect any text-emitting command (or pipeline) into it
 — for example:
