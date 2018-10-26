@@ -15,6 +15,7 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 ## Usage
 
 **[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.2.1/up)**
+&nbsp; | &nbsp; [Other OSes](https://github.com/akavel/up/releases)
 
 To start using **up**, redirect any text-emitting command (or pipeline) into it
 — for example:
@@ -26,13 +27,14 @@ then:
 - use ***PgUp/PgDn*** and ***Ctrl-[←]/Ctrl-[→]*** for basic browsing through
   the command output;
 - in the input box at the top of the screen, start **writing any bash
-  pipeline**; the Ultimate Plumber will **execute the command as you type it**,
-  and immediately show you the output of the pipeline in the **scrollable
-  window** below (replacing any earlier contents)
+  pipeline**; then **press Enter to execute the command you typed**,
+  and the Ultimate Plumber will immediately show you the output of
+  the pipeline in the **scrollable window** below (replacing any
+  earlier contents)
     - For example, you can try writing:
       `grep network -A2 | grep : | cut -d: -f2- | paste - -`
-      — on my computer, the screen then shows the pipeline and a scrollable
-      preview of its output like below:
+      — on my computer, after pressing *Enter*, the screen then shows
+      the pipeline and a scrollable preview of its output like below:
 
              | grep network -A2 | grep : | cut -d: -f2- | paste - -
              Wireless interface      Centrino Advanced-N 6235
@@ -41,13 +43,7 @@ then:
     - **WARNING: Please be careful when using it! It could be dangerous.**
       In particular, writing "rm" or "dd" into it could be like running around
       with a chainsaw. But you'd be careful writing "rm" anywhere in Linux
-      anyway, no? Also, why would you want to pipe something into "rm"? Other
-      than that, I don't really have good ideas how to protect against cases
-      like this. And in the other, non-dangerous cases, I find the tool
-      immensely useful. If you have some ideas how to
-      try to protect, [please share!](https://github.com/akavel/up/issues)
-      That said, a tool wouldn't be really Unixy if you couldn't hurt yourself
-      with it, right? ;P
+      anyway, no?
 - when you are satisfied with the result, you can **press *Ctrl-X* to exit**
   the Ultimate Plumber, and the command you built will be **written into
   `up1.sh` file** in the current working directory (or, if it already existed,
@@ -89,12 +85,11 @@ then:
   publicity that my attention was directed to one such earlier project already:
   **[Pipecut](http://pipecut.org/index.html)**. Looks interesting! You may like
   to check it too! (Thanks [@TronDD](https://lobste.rs/s/acpz00/up_tool_for_writing_linux_pipes_with#c_qxrgoa).)
+- **Other influences:** I don't remember the fact too well already, but I'm
+  rather sure that this must have been inspired in big part by The Bret Victor's Talk(s).
 
 ## Future Ideas
 
-- This is version 0.1 of *the Ultimate Plumber*: a minimal viable product I was
-  comfortable to release to the public, hoping it might be of use to some of
-  you already.
 - I have quite a lot of ideas for further experimentation of development of
   *up*, including but not limited to:
     - [RIIR](https://rust-lang.org) (once I learn enough of Rust... at some
