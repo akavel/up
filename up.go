@@ -34,7 +34,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const version = "0.2.1 (2018-10-25)"
+const version = "0.3 (2018-10-27)"
 
 // TODO: [#4] in case of error, show it in red (bg?), then below show again initial normal output
 // TODO: F1 should display help, and it should be multi-line, and scrolling licensing credits
@@ -90,6 +90,22 @@ func main() {
 		log.SetOutput(debug)
 	}
 
+	// Find out what is the user's preferred login shell. This also allows user
+	// to choose the "engine" used for command execution.
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		var err error
+		shell, err = exec.LookPath("bash")
+		if err == nil {
+			goto shell_found
+		}
+		shell, err = exec.LookPath("sh")
+		if err != nil {
+			die("cannot find shell: $SHELL is empty, neither bash nor sh are in $PATH")
+		}
+	}
+shell_found:
+
 	// Initialize TUI infrastructure
 	tui := initTUI()
 	defer tui.Fini()
@@ -128,7 +144,7 @@ func main() {
 		if restart || (*unsafeMode && command != lastCommand) {
 			commandSubprocess.Kill()
 			if command != "" {
-				commandSubprocess = StartSubprocess(command, stdinCapture, func() { triggerRefresh(tui) })
+				commandSubprocess = StartSubprocess(shell, command, stdinCapture, func() { triggerRefresh(tui) })
 				commandOutput.Buf = commandSubprocess.Buf
 			} else {
 				// If command is empty, show original input data again (~ equivalent of typing `cat`)
@@ -195,7 +211,7 @@ func main() {
 				ctrlKey(tcell.KeyCtrlX):
 				// Write script 'upN.sh' and quit
 				tui.Fini()
-				writeScript(commandEditor.String(), tui)
+				writeScript(shell, commandEditor.String(), tui)
 				return
 			}
 		}
@@ -591,7 +607,7 @@ type Subprocess struct {
 	cancel context.CancelFunc
 }
 
-func StartSubprocess(command string, stdin *Buf, notify func()) *Subprocess {
+func StartSubprocess(shell, command string, stdin *Buf, notify func()) *Subprocess {
 	ctx, cancel := context.WithCancel(context.TODO())
 	r, w := io.Pipe()
 	p := &Subprocess{
@@ -599,7 +615,7 @@ func StartSubprocess(command string, stdin *Buf, notify func()) *Subprocess {
 		cancel: cancel,
 	}
 
-	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+	cmd := exec.CommandContext(ctx, shell, "-c", command)
 	cmd.Stdout = w
 	cmd.Stderr = w
 	cmd.Stdin = stdin.NewReader(true)
@@ -634,7 +650,7 @@ func getKey(ev *tcell.EventKey) key { return key(ev.Modifiers())<<16 + key(ev.Ke
 func altKey(base tcell.Key) key     { return key(tcell.ModAlt)<<16 + key(base) }
 func ctrlKey(base tcell.Key) key    { return key(tcell.ModCtrl)<<16 + key(base) }
 
-func writeScript(command string, tui tcell.Screen) {
+func writeScript(shell, command string, tui tcell.Screen) {
 	os.Stderr.WriteString("up: Ultimate Plumber v" + version + " https://github.com/akavel/up\n")
 	var f *os.File
 	var err error
@@ -664,7 +680,7 @@ func writeScript(command string, tui tcell.Screen) {
 	goto fallback_tmp
 
 try_file:
-	_, err = fmt.Fprintf(f, "#!/bin/bash\n%s\n", command)
+	_, err = fmt.Fprintf(f, "#!%s\n%s\n", shell, command)
 	if err != nil {
 		goto fallback_tmp
 	}
@@ -682,7 +698,7 @@ fallback_tmp:
 	if err != nil {
 		goto fallback_print
 	}
-	_, err = fmt.Fprintf(f, "#!/bin/bash\n%s\n", command)
+	_, err = fmt.Fprintf(f, "#!%s\n%s\n", shell, command)
 	if err != nil {
 		goto fallback_print
 	}
