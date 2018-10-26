@@ -19,8 +19,8 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 
 #### Other OSes:
     
-   On Archlinux:
-   
+  - On Archlinux: 
+      
         yaourt -S go-up
 
 To start using **up**, redirect any text-emitting command (or pipeline) into it
