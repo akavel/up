@@ -15,9 +15,8 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 ## Usage
 
 
-### **[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.1/up)**
-
-#### Other OSes:
+**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.2.1/up)**
+&nbsp; | &nbsp; [Other OSes](https://github.com/akavel/up/releases)
     
   - On Archlinux: 
       
