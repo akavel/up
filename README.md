@@ -14,7 +14,7 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 
 ## Usage
 
-**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.2.1/up)**
+**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.3/up)**
 &nbsp; | &nbsp; [Other OSes](https://github.com/akavel/up/releases)
 
 To start using **up**, redirect any text-emitting command (or pipeline) into it
