@@ -1,131 +1,130 @@
-# up - the Ultimate Plumber
+# up - le plombier ultime
 
-**up** is the **Ultimate Plumber**, a tool for writing Linux pipes in a
-terminal-based UI interactively, with instant live preview of command results.
+** up ** est le ** Ultimate Plumber **, un outil pour écrire des pipes Linux dans un
+interface utilisateur interactive basée sur le terminal, avec aperçu instantané en direct des résultats de la commande.
 
-The main **goal** of the Ultimate Plumber is to help **interactively and
-incrementally explore textual data** in Linux, by making it easier to quickly
-build complex pipelines, thanks to a **fast feedback loop**. This is achieved
-by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
-`cut`, `paste`, `awk`, `wc`, `perl`, etc., etc., by providing a quick,
-**interactive, scrollable preview** of their results.
+L’objectif ** principal ** du plombier final est d’aider ** de manière interactive et
+explorer de manière incrémentielle les données textuelles ** sous Linux, en facilitant la
+construire des pipelines complexes, grâce à une ** boucle de rétroaction rapide **. Ceci est réalisé
+en renforçant tous les ** utilitaires Linux ** de traitement de texte tels que `grep`,` sort`,
+`cut`,` paste`, `awk`,` wc`, `perl`, etc., etc., en fournissant un rapide,
+** aperçu interactif, défilable ** de leurs résultats.
 
-[![](up.gif)](https://asciinema.org/a/208538)
+[! [] (up.gif)] (https://asciinema.org/a/208538)
 
-## Usage
+## Utilisation
 
-**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.3/up)**
-&nbsp; | &nbsp; [Other OSes](https://github.com/akavel/up/releases)
+** [Télécharger * en haut * pour Linux] (https://github.com/akavel/up/releases/download/v0.3/up) **
+& nbsp; | & nbsp; [Autres systèmes d'exploitation] (https://github.com/akavel/up/releases)
 
-To start using **up**, redirect any text-emitting command (or pipeline) into it
-— for example:
+Pour commencer à utiliser ** up **, redirigez-y toute commande (ou pipeline) émettant du texte.
+- par exemple:
 
-    $ lshw |& ./up
+    $ lshw | & ./up
 
-then:
+puis:
 
-- use ***PgUp/PgDn*** and ***Ctrl-[←]/Ctrl-[→]*** for basic browsing through
-  the command output;
-- in the input box at the top of the screen, start **writing any bash
-  pipeline**; then **press Enter to execute the command you typed**,
-  and the Ultimate Plumber will immediately show you the output of
-  the pipeline in the **scrollable window** below (replacing any
-  earlier contents)
-    - For example, you can try writing:
-      `grep network -A2 | grep : | cut -d: -f2- | paste - -`
-      — on my computer, after pressing *Enter*, the screen then shows
-      the pipeline and a scrollable preview of its output like below:
+- utilisez *** PgUp / PgDn *** et *** Ctrl- [←] / Ctrl- [→] *** pour une navigation de base
+  la sortie de la commande;
+- dans la zone de saisie en haut de l'écran, commencez ** par écrire n'importe quel bash
+  pipeline**; puis ** appuyez sur Entrée pour exécuter la commande que vous avez saisie **,
+  et le plombier ultime vous montrera immédiatement la sortie de
+  le pipeline dans la ** fenêtre à défilement ** ci-dessous (en remplacement de
+  contenu précédent)
+    - Par exemple, vous pouvez essayer d’écrire:
+      `grep network -A2 | grep: | cut -d: -f2- | coller - -`
+      - sur mon ordinateur, après avoir appuyé sur * Entrée *, l'écran affiche
+      le pipeline et un aperçu déroulant de sa sortie comme ci-dessous:
 
-             | grep network -A2 | grep : | cut -d: -f2- | paste - -
-             Wireless interface      Centrino Advanced-N 6235
-             Ethernet interface      RTL8111/8168/8411 PCI Express Gigabit Ethernet Controller
+             | réseau grep -A2 | grep: | cut -d: -f2- | coller - -
+             Interface sans fil Centrino Advanced-N 6235
+             Interface Ethernet Contrôleur Ethernet Gigabit PCI Express RTL8111 / 8168/8411
 
-    - **WARNING: Please be careful when using it! It could be dangerous.**
-      In particular, writing "rm" or "dd" into it could be like running around
-      with a chainsaw. But you'd be careful writing "rm" anywhere in Linux
-      anyway, no?
-- when you are satisfied with the result, you can **press *Ctrl-X* to exit**
-  the Ultimate Plumber, and the command you built will be **written into
-  `up1.sh` file** in the current working directory (or, if it already existed,
-  `up2.sh`, etc., until 1000, based on [Shlemiel the Painter's
-  algorithm](https://www.joelonsoftware.com/2001/12/11/back-to-basics/)).
-  Alternatively, you can press ***Ctrl-C*** to quit without saving.
-- If the command you piped into *up* is long-running (in such case you will see
-  a tilde `~` indicator character in the top-left corner of the screen, meaning
-  that *up* is still waiting for more input), you may need to press
-  ***Ctrl-S*** to temporarily freeze *up*'s input buffer (a freeze will be
-  indicated by a `#` character in top-left corner), which will inject a fake
-  EOF into the pipeline; otherwise, some commands in the pipeline may not print
-  anything, waiting for full input (especially commands like `wc` or `sort`,
-  but `grep`, `perl`, etc. may also show incomplete results). To unfreeze back,
-  press ***Ctrl-Q***.
+    - ** AVERTISSEMENT: soyez prudent lorsque vous l'utilisez! Cela pourrait être dangereux. **
+      En particulier, écrire "rm" ou "dd" dedans pourrait ressembler à courir
+      avec une scie à chaîne. Mais vous feriez bien d'écrire "rm" n'importe où dans Linux
+      de toute façon, non?
+- lorsque vous êtes satisfait du résultat, vous pouvez ** appuyer sur * Ctrl-X * pour quitter **
+  le plombier ultime, et la commande que vous avez construite sera ** écrite dans
+  `up1.sh` fichier ** dans le répertoire de travail actuel (ou, s'il existait déjà,
+  `up2.sh`, etc., jusqu’à 1000, sur la base de [Shlemiel le peintre
+  algorithme] (https://www.joelonsoftware.com/2001/12/11/back-to-basics/)).
+  Vous pouvez également appuyer sur *** Ctrl-C *** pour quitter sans enregistrer.
+- Si la commande dans laquelle vous transmettez * up * dure longtemps (dans ce cas, vous verrez
+  un tilde `~` caractère indicateur dans le coin supérieur gauche de l'écran, ce qui signifie
+  que * up * attend toujours plus d’entrée), vous devrez peut-être appuyer sur
+  *** Ctrl-S *** pour geler temporairement le tampon d'entrée de * up * (un gel sera
+  indiqué par un caractère «#» dans le coin supérieur gauche), qui injectera un faux
+  EOF dans le pipeline; sinon, certaines commandes du pipeline risquent de ne pas être imprimées
+  quoi que ce soit, en attente d'une entrée complète (en particulier des commandes comme `wc` ou` sort`,
+  mais `grep`,` perl`, etc. peuvent également donner des résultats incomplets). Dégeler,
+  appuyez sur *** Ctrl-Q ***.
+## Notes complémentaires
 
-## Additional Notes
+- Le pipeline est transmis textuellement à une commande `bash -c`, ainsi tout bash-isms devrait fonctionner.
+- La mémoire tampon d'entrée de Ultimate Plumber est actuellement fixée à ** 40 Mo **. Si
+  vous atteignez cette limite, un caractère `+` devrait s'afficher en haut à gauche
+  coin de l'écran. (Ceci est destiné à être changé en un
+  développable de manière dynamique / manuelle dans une future version de * up *.)
+- ** Prise en charge de MacOSX: ** Je n'ai pas de Mac, donc je ne sais pas s'il fonctionne sur
+  un. Vous êtes invités à essayer et à envoyer des relations publiques. Si vous êtes intéressé par
+  me fournissant une sorte de support de type officiel pour MacOSX, veuillez considérer
+  essayant de trouver un moyen de m'envoyer un ordinateur Mac utilisable. Notez s'il vous plaît
+  Je n'essaie pas de "profiter" de cela, car je ne suis en fait pas du tout
+  intéressé à atteindre un Mac autrement. (En outre, en essayant de s'engager à ce genre
+  de soutien sera un fardeau supplémentaire et une obligation pour moi. Connaître quelqu'un
+  il se soucie assez de faire un geste physique de fantaisie aiderait vraiment à soulager
+  Si vous êtes suffisamment sérieux pour envisager cette option, veuillez me contacter par
+  email (mailto: czapkofan@gmail.com) ou keybase (https://keybase.io/akavel), donc
+  que nous pourrions essayer de rechercher des moyens pour y parvenir.
+  Merci de votre compréhension!
+- ** Etat de la technique: ** J'étais surpris que personne ne semble avoir écrit un outil similaire auparavant,
+  que j'ai pu trouver. Il aurait dû être possible d'écrire cela depuis l'aube
+  de Unix déjà, ou plus tôt! Et en effet, après avoir annoncé * up *, j'en ai assez
+  annonce que mon attention a déjà été portée sur un de ces projets précédents:
+  ** [Pipecut] (http://pipecut.org/index.html) **. Semble intéressant! Tu peux aimer
+  pour le vérifier aussi! (Merci [@TronDD] (https://lobste.rs/s/acpz00/up_tool_for_writing_linux_pipes_with#c_qxrgoa).)
+- ** Autres influences: ** Je ne me rappelle pas trop bien le fait, mais je suis
+  Plutôt sûr que cela doit avoir été inspiré en grande partie par The Bret Victor's Talk.
 
-- The pipeline is passed verbatim to a `bash -c` command, so any bash-isms should work.
-- The input buffer of the Ultimate Plumber is currently fixed at **40 MB**. If
-  you reach this limit, a `+` character should get displayed in the top-left
-  corner of the screen. (This is intended to be changed to a
-  dynamically/manually growable buffer in a future version of *up*.)
-- **MacOSX support:** I don't have a Mac, thus I have no idea if it works on
-  one. You are welcome to try, and also to send PRs. If you're interested in
-  me providing some kind of official-like support for MacOSX, please consider
-  trying to find a way to send me some usable-enough Mac computer. Please note
-  I'm not trying to "take advantage" of you by this, as I'm actually not at all
-  interested in achieving a Mac otherwise. (Also, trying to commit to this kind
-  of support will be an extra burden and obligation on me. Knowing someone out
-  there cares enough to do a fancy physical gesture would really help alleviate
-  this.) If you're serious enough to consider this option, please contact me by
-  email (mailto:czapkofan@gmail.com) or keybase (https://keybase.io/akavel), so
-  that we could try to research possible ways to achieve this.
-  Thanks for understanding!
-- **Prior art:** I was surprised no one seemed to write a similar tool before,
-  that I could find. It should have been possible to write this since the dawn
-  of Unix already, or earlier! And indeed, after I announced *up*, I got enough
-  publicity that my attention was directed to one such earlier project already:
-  **[Pipecut](http://pipecut.org/index.html)**. Looks interesting! You may like
-  to check it too! (Thanks [@TronDD](https://lobste.rs/s/acpz00/up_tool_for_writing_linux_pipes_with#c_qxrgoa).)
-- **Other influences:** I don't remember the fact too well already, but I'm
-  rather sure that this must have been inspired in big part by The Bret Victor's Talk(s).
+## Idées futures
 
-## Future Ideas
+- J'ai pas mal d'idées pour poursuivre l'expérimentation du développement de
+  * up *, y compris mais sans s'y limiter:
+    - [RIIR] (https://rust-lang.org) (une fois que j'en saurai assez sur Rust ... chez certains
+      point à l'avenir ... peut-être ...) - esp. j'espère que maquille * être * un plus petit
+      binaire (et peut-être enfin apprendre un peu de rouille); si je suis un peu
+      peur si cela pourrait ossifier la base de code et rendre plus difficile à développer
+      plus loin..? ... mais peut-être réellement converser? ...
+    - Peut-être que cela pourrait être transformé en une interface sans interface utilisateur, RPC / REST / socket / text-driven
+      comme gocode ou [Language Servers] (https://langserver.org/), par exemple,
+      intégration avec les éditeurs / IDE (emacs? vim? VSCode? ...) Je serais particulièrement
+      intéressé à le fusionner éventuellement dans [Luna
+      Studio] (https://luna-lang.org/); Le RIIR peut aider à cela. (Avant cela, comme
+      une approche plus simple, une édition sur plusieurs lignes peut être nécessaire, ou du moins
+      défilement gauche et droit de la zone de saisie de l'éditeur de commandes. En outre, une sorte de
+      sauter entre les mots dans la ligne de commande; les lignes de lecture * Alt-b * et * Alt-f *?)
+    - Permettre de [capturer la sortie de déjà en cours
+      processus] (https://stackoverflow.com/a/19584979/98528)! (Mais peut-être que
+      pourrait être mieux fait comme un outil distinct, composable! En rouille?)
+    - Ajout de tests ... (ahem; voir aussi
+      [# 1] (https://github.com/akavel/up/issues/1)) ... écrivez aussi `--help` ...
+    - Le faire fonctionner sous Windows,
+      en quelque sorte [?] (https://github.com/mattn/go-shellwords) Aussi, évidemment,
+      être agréable d'avoir une infrastructure CI permettant de le porter sur MacOSX,
+      BSD, etc., etc ...
+    - Intégration avec [fzf] (https://github.com/junegunn/fzf) et d'autres TUI
+      outils? Je n'ai que quelques idées et idées vagues à ce sujet à partir de maintenant, pas
+      même sûr à quoi cela pourrait ressembler.
+    - Ajout de plus de prévisualisations, pour chaque `|` du pipeline; aussi forking de
+      pipelines, fusion, boucles de rétroaction et autres opérations de mélange et d’appariement (bien que
+      Je préférerais fortement que [Luna] (https://luna-lang.org) le fasse
+      finalement).
+- Si vous souhaitez financer mes travaux de R & D, contactez-moi par courrier électronique à l'adresse suivante:
+  czapkofan@gmail.com, ou [sur keybase.io en tant que akavel] (https://keybase.io/akavel).
+  Je suppose que je développerai probablement encore le Ultimate Plumber,
+  mais pour le moment, c’est purement un projet de loisir, avec tout le plaisir et les risques que cela comporte.
+  implique.
 
-- I have quite a lot of ideas for further experimentation of development of
-  *up*, including but not limited to:
-    - [RIIR](https://rust-lang.org) (once I learn enough of Rust... at some
-      point in future... maybe...) — esp. to hopefully make *up* be a smaller
-      binary (and also to maybe finally learn some Rust); though I'm somewhat
-      afraid if it might ossify the codebase and make harder to develop
-      further..? ...but maybe actually converse?...
-    - Maybe it could be made into an UI-less, RPC/REST/socket/text-driven
-      service, like gocode or [Language Servers](https://langserver.org/), for
-      integration with editors/IDEs (emacs? vim? VSCode?...) I'd be especially
-      interested in eventually merging it into [Luna
-      Studio](https://luna-lang.org/); RIIR may help in this. (Before this, as
-      a simpler approach, multi-line editing may be needed, or at least
-      left&right scrolling of the command editor input box. Also, some kind of
-      jumping between words in the command line; readline's *Alt-b* & *Alt-f*?)
-    - Make it possible to [capture output of already running
-      processes](https://stackoverflow.com/a/19584979/98528)! (But maybe that
-      could be better made as a separate, composable tool! In Rust?)
-    - Adding tests... (ahem; see also
-      [#1](https://github.com/akavel/up/issues/1)) ...also write `--help`...
-    - Making it work on Windows,
-      somehow[?](https://github.com/mattn/go-shellwords) Also, obviously, would
-      be nice to have some CI infrastructure enabling porting it to MacOSX,
-      BSDs, etc., etc...
-    - Integration with [fzf](https://github.com/junegunn/fzf) and other TUI
-      tools? I only have some vague thoughts and ideas about it as of now, not
-      even sure how this could look like.
-    - Adding more previews, for each `|` in the pipeline; also forking of
-      pipelines, merging, feedback loops, and other mixing and matching (though
-      I'd strongly prefer if [Luna](https://luna-lang.org) was to do it
-      eventually).
-- If you are interested in financing my R&D work, contact me by email at:
-  czapkofan@gmail.com, or [on keybase.io as akavel](https://keybase.io/akavel).
-  I suppose I will probably be developing the Ultimate Plumber further anyway,
-  but at this time it's purely a hobby project, with all the fun and risks this
-  entails.
-
-— *Mateusz Czapliński*  
-*October 2018*
+- * Mateusz Czapliński *
+* Octobre 2018 *
