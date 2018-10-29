@@ -96,15 +96,14 @@ func main() {
 	if shell == "" {
 		var err error
 		shell, err = exec.LookPath("bash")
-		if err == nil {
-			goto shell_found
-		}
-		shell, err = exec.LookPath("sh")
 		if err != nil {
-			die("cannot find shell: $SHELL is empty, neither bash nor sh are in $PATH")
+			shell, err = exec.LookPath("sh")
+			if err != nil {
+				die("cannot find shell: $SHELL is empty, neither bash nor sh are in $PATH")
+			}
 		}
 	}
-shell_found:
+	log.Printf("using shell: %v", shell)
 
 	// Initialize TUI infrastructure
 	tui := initTUI()
