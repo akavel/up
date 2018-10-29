@@ -116,7 +116,7 @@ then:
       BSDs, etc., etc...
     - Integration with [fzf](https://github.com/junegunn/fzf) and other TUI
       tools? I only have some vague thoughts and ideas about it as of now, not
-      even sure how this could look like.
+      sure how this could look like.
     - Adding more previews, for each `|` in the pipeline; also forking of
       pipelines, merging, feedback loops, and other mixing and matching (though
       I'd strongly prefer if [Luna](https://luna-lang.org) was to do it
