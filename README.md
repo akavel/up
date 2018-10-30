@@ -1,12 +1,12 @@
-# up - the Ultimate Plumber
+# up - The Ultimate Plumber
 
-**up** is the **Ultimate Plumber**, a tool for writing Linux pipes in a
-terminal-based UI interactively, with instant live preview of command results.
+**up** is **The Ultimate Plumber** tool for writing Linux pipes in a
+terminal-based UI. It is interactive which features instant live previews of command results.
 
-The main **goal** of the Ultimate Plumber is to help **interactively and
-incrementally explore textual data** in Linux, by making it easier to quickly
-build complex pipelines, thanks to a **fast feedback loop**. This is achieved
-by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
+The main **goal** of The Ultimate Plumber is to help **interactively and
+incrementally explore textual data** in Linux by making it easier to quickly
+build complex pipelines. This is achievable due to the use of a **fast feedback loop**. The loop boosts
+any typical **Linux text-processing utils** such as `grep`, `sort`,
 `cut`, `paste`, `awk`, `wc`, `perl`, etc., etc., by providing a quick,
 **interactive, scrollable preview** of their results.
 
@@ -17,20 +17,20 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 **[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.3/up)**
 &nbsp; | &nbsp; [Other OSes](https://github.com/akavel/up/releases)
 
-To start using **up**, redirect any text-emitting command (or pipeline) into it
-— for example:
+To start using **up**, redirect any text-emitting command (or pipeline) into it.
+For example:
 
     $ lshw |& ./up
 
-then:
+and then:
 
-- use ***PgUp/PgDn*** and ***Ctrl-[←]/Ctrl-[→]*** for basic browsing through
-  the command output;
-- in the input box at the top of the screen, start **writing any bash
-  pipeline**; then **press Enter to execute the command you typed**,
-  and the Ultimate Plumber will immediately show you the output of
+- Use ***PgUp/PgDn*** and ***Ctrl-[←]/Ctrl-[→]*** for basic browsing through
+  the command output.
+- In the input box at the top of the screen, start **writing any bash
+  pipeline**, then **press Enter to execute the command you typed**.
+  The Ultimate Plumber will immediately show you the output of
   the pipeline in the **scrollable window** below (replacing any
-  earlier contents)
+  earlier contents).
     - For example, you can try writing:
       `grep network -A2 | grep : | cut -d: -f2- | paste - -`
       — on my computer, after pressing *Enter*, the screen then shows
@@ -44,8 +44,8 @@ then:
       In particular, writing "rm" or "dd" into it could be like running around
       with a chainsaw. But you'd be careful writing "rm" anywhere in Linux
       anyway, no?
-- when you are satisfied with the result, you can **press *Ctrl-X* to exit**
-  the Ultimate Plumber, and the command you built will be **written into
+- When you are satisfied with the result, you can **press *Ctrl-X* to exit**
+  the Ultimate Plumber and the command you built will be **written into
   `up1.sh` file** in the current working directory (or, if it already existed,
   `up2.sh`, etc., until 1000, based on [Shlemiel the Painter's
   algorithm](https://www.joelonsoftware.com/2001/12/11/back-to-basics/)).
