@@ -120,13 +120,20 @@ shell_found:
 		// Sometimes, a message may be displayed at the bottom of the screen, with help or other info
 		message = `Enter runs  ^X exit (^C nosave)  PgUp/PgDn/Up/Dn/^</^> scroll  ^S pause (^Q end)  [Ultimate Plumber v` + version + ` by akavel et al.]`
 	)
+	// if up is called directly, feed an empty ioreader else use the input piped to up
+	var stdinInit io.Reader
+        if isatty.IsTerminal(os.Stdin.Fd()) {
+                stdinInit = strings.NewReader("")
+        } else {
+                stdinInit = os.Stdin
+        }
 
 	// Initialize main data flow
 	var (
 		// We capture data piped to 'up' on standard input into an internal buffer
 		// When some new data shows up on stdin, we raise a custom signal,
 		// so that main loop will refresh the buffers and the output.
-		stdinCapture = NewBuf().StartCapturing(os.Stdin, func() { triggerRefresh(tui) })
+		stdinCapture = NewBuf().StartCapturing(stdinInit, func() { triggerRefresh(tui) })
 		// Then, we pass this data as input to a subprocess.
 		// Initially, no subprocess is running, as no command is entered yet
 		commandSubprocess *Subprocess = nil
@@ -219,12 +226,6 @@ shell_found:
 }
 
 func initTUI() tcell.Screen {
-	// TODO: Without below block, we'd hang when nothing is piped on input (see
-	// github.com/peco/peco, mattn/gof, fzf, etc.)
-	if isatty.IsTerminal(os.Stdin.Fd()) {
-		die("up requires some data piped on standard input, for example try: `echo hello world | up`")
-	}
-
 	// Init TUI code
 	// TODO: maybe try gocui or termbox?
 	tui, err := tcell.NewScreen()
