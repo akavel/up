@@ -92,19 +92,26 @@ func main() {
 
 	// Find out what is the user's preferred login shell. This also allows user
 	// to choose the "engine" used for command execution.
+	log.Println("checking $SHELL...")
 	shell := os.Getenv("SHELL")
-	if shell == "" {
-		var err error
-		shell, err = exec.LookPath("bash")
-		if err == nil {
+	{
+		if shell != "" {
 			goto shell_found
 		}
-		shell, err = exec.LookPath("sh")
-		if err != nil {
-			die("cannot find shell: $SHELL is empty, neither bash nor sh are in $PATH")
+		log.Println("checking bash...")
+		shell, _ = exec.LookPath("bash")
+		if shell != "" {
+			goto shell_found
 		}
+		log.Println("checking sh...")
+		shell, _ = exec.LookPath("sh")
+		if shell != "" {
+			goto shell_found
+		}
+		die("cannot find shell: $SHELL is empty, neither bash nor sh are in $PATH")
+	shell_found:
+		log.Println("found shell:", shell)
 	}
-shell_found:
 
 	// Initialize TUI infrastructure
 	tui := initTUI()
