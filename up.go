@@ -123,7 +123,7 @@ shell_found:
 	// if up is called directly, feed an empty ioreader else use the input piped to up
 	var stdinInit io.Reader
         if isatty.IsTerminal(os.Stdin.Fd()) {
-                stdinInit = strings.NewReader("")
+                stdinInit = bytes.NewReader([]byte(""))
         } else {
                 stdinInit = os.Stdin
         }
