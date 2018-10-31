@@ -36,7 +36,7 @@ import (
 
 const version = "0.3 (2018-10-27)"
 
-// TODO: [#4] in case of error, show it in red (bg?), then below show again initial normal output
+// TODO: in case of error, show it in red (bg?), then below show again initial normal output (see also #4)
 // TODO: F1 should display help, and it should be multi-line, and scrolling licensing credits
 // TODO: some key shortcut to increase stdin capture buffer size (unless EOF already reached)
 // TODO: show status infos:
@@ -46,13 +46,13 @@ const version = "0.3 (2018-10-27)"
 // TODO: [LATER] make it work on Windows; maybe with mattn/go-shellwords ?
 // TODO: [LATER] Ctrl-O shows input via `less` or $PAGER
 // TODO: properly show all licenses of dependencies on --version
-// TODO: [LATER] on ^X, leave TUI and run the command through buffered input, then unpause rest of input
+// TODO: [LATER] on ^X (?), leave TUI and run the command through buffered input, then unpause rest of input
 // TODO: [LATER] allow adding more elements of pipeline (initially, just writing `foo | bar` should work)
-// TODO: [LATER] allow invocation with partial command, like: `up grep -i`
-// TODO: [LATER][MAYBE] allow reading upN.sh scripts
-// TODO: [MUCH LATER] readline-like rich editing support? and completion?
+// TODO: [LATER] allow invocation with partial command, like: `up grep -i` (see also #11)
+// TODO: [LATER][MAYBE] allow reading upN.sh scripts (see also #11)
+// TODO: [MUCH LATER] readline-like rich editing support? and completion? (see also #28)
 // TODO: [MUCH LATER] integration with fzf? and pindexis/marker?
-// TODO: [LATER] forking and unforking pipelines
+// TODO: [LATER] forking and unforking pipelines (see also #4)
 // TODO: [LATER] capture output of a running process (see: https://stackoverflow.com/q/19584825/98528)
 // TODO: [LATER] richer TUI:
 // - show # of read lines & kbytes
@@ -63,10 +63,8 @@ const version = "0.3 (2018-10-27)"
 // TODO: [LATER][MAYBE] allow "plugins" ("combos" - commands with default options) e.g. for Lua `lua -e`+auto-quote, etc.
 // TODO: [LATER] make it more friendly to infrequent Linux users by providing "descriptive" commands like "search" etc.
 // TODO: [LATER] advertise on some reddits for data exploration / data science
-// TODO: [LATER] undo/redo - history of commands
-// TODO: [LATER] if writing upN.sh failed, write to $TMP/up.$RANDOM.sh (a.k.a. tempfile())
-// TODO: [LATER] jump between buffers saved from earlier pipe fragments; OR: allow saving/recalling "snapshots" of (cmd, results) pairs
-// TODO: [LATER] on ^C, print version & commandline on stderr
+// TODO: [LATER] undo/redo - history of commands (see also #4)
+// TODO: [LATER] jump between buffers saved from earlier pipe fragments; OR: allow saving/recalling "snapshots" of (cmd, results) pairs (see also #4)
 // TODO: [LATER] ^-, U -- to switch to "unsafe mode"? -u to switch back? + some visual marker
 
 var (
