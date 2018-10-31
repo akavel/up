@@ -75,6 +75,7 @@ var (
 	unsafeMode   = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
 	outputScript = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
 	debugMode    = pflag.Bool("debug", false, "debug mode")
+	versionFlag = pflag.Bool("version", false, "display version and credits")
 )
 
 func main() {
@@ -82,6 +83,24 @@ func main() {
 	pflag.Parse()
 
 	log.SetOutput(ioutil.Discard)
+	if *versionFlag {
+		os.Stdout.WriteString("up: Ultimate Plumber v" + version + " https://github.com/akavel/up\n")
+		os.Stdout.WriteString("up: \n")
+		os.Stdout.WriteString("up: Dependencies:\n")
+		os.Stdout.WriteString("up: \tTcell\n")
+		os.Stdout.WriteString("up: \t\thttps://github.com/gdamore/tcell\n")
+		os.Stdout.WriteString("up: \t\tLicense: Apache-2.0, ECL-2.0\n")
+		os.Stdout.WriteString("up: \n")
+		os.Stdout.WriteString("up: \tgo-isatty\n")
+		os.Stdout.WriteString("up: \t\thttps://github.com/mattn/go-isatty\n")
+		os.Stdout.WriteString("up: \t\tLicense: MIT, MIT-feh, JSON, Xnet\n")
+		os.Stdout.WriteString("up: \n")
+		os.Stdout.WriteString("up: \tpflag\n")
+		os.Stdout.WriteString("up: \t\thttps://github.com/spf13/pflag\n")
+		os.Stdout.WriteString("up: \t\tLicense: BSD-3-Clause, BSD-Source-Code, BSD-3-Clause-No-Nuclear-License-2014, BSD-4-Clause\n\n")
+		return
+	}
+	
 	if *debugMode {
 		debug, err := os.Create("up.debug")
 		if err != nil {
