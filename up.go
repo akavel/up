@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,6 +31,7 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/terminfo"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/pflag"
 )
@@ -233,6 +235,29 @@ func initTUI() tcell.Screen {
 	// Init TUI code
 	// TODO: maybe try gocui or termbox?
 	tui, err := tcell.NewScreen()
+	if err == terminfo.ErrTermNotFound {
+		term := os.Getenv("TERM")
+		hash := sha1.Sum([]byte(term))
+		// TODO: add a flag which would attempt to perform the download automatically if explicitly requested by user
+		die(fmt.Sprintf(`%[1]s
+Your terminal code:
+	TERM=%[2]s
+was not found in the database provided by tcell library. Please try checking if
+a supplemental database is found for your terminal at one of the following URLs:
+	https://github.com/gdamore/tcell/raw/master/terminfo/database/%.1[3]x/%.4[3]x
+	https://github.com/gdamore/tcell/raw/master/terminfo/database/%.1[3]x/%.4[3]x.gz
+If yes, download it and save in the following directory:
+	$HOME/.tcelldb/%.1[3]x/
+then try running "up" again. If that does not work for you, please first consult:
+	https://github.com/akavel/up/issues/15
+and if you don't see your terminal code mentioned there, please try asking on:
+	https://github.com/gdamore/tcell/issues
+Or, you might try changing TERM temporarily to some other value, for example by
+running "up" with:
+	TERM=xterm up
+Good luck!`,
+			err, term, hash))
+	}
 	if err != nil {
 		die(err.Error())
 	}
