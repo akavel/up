@@ -340,6 +340,8 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 		e.cursor = 0
 	case ctrlKey(tcell.KeyCtrlE):
 		e.cursor = e.lastw
+	case ctrlKey(tcell.KeyCtrlK):
+		e.value = e.value[:e.cursor]
 	default:
 		// Unknown key/combination, not handled
 		return false
