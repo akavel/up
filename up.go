@@ -283,9 +283,10 @@ func NewEditor(prompt string) *Editor {
 
 type Editor struct {
 	// TODO: make editor multiline. Reuse gocui or something for this?
-	prompt []rune
-	value  []rune
-	cursor int
+	prompt    []rune
+	value     []rune
+	killspace []rune
+	cursor    int
 	// lastw is length of value on last Draw; we need it to know how much to erase after backspace
 	lastw int
 }
@@ -341,7 +342,9 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	case ctrlKey(tcell.KeyCtrlE):
 		e.cursor = e.lastw
 	case ctrlKey(tcell.KeyCtrlK):
-		e.value = e.value[:e.cursor]
+		e.kill()
+	case ctrlKey(tcell.KeyCtrlY):
+		e.yank()
 	default:
 		// Unknown key/combination, not handled
 		return false
@@ -364,6 +367,20 @@ func (e *Editor) delete(dx int) {
 	}
 	e.value = append(e.value[:pos], e.value[pos+1:]...)
 	e.cursor = pos
+}
+
+func (e *Editor) kill() {
+	e.killspace = e.value[e.cursor:]
+	e.value = e.value[:e.cursor]
+}
+
+func (e *Editor) yank() {
+	if len(e.killspace) == 0 {
+		return
+	}
+	for _, r := range e.killspace {
+		e.insert(r)
+	}
 }
 
 type BufView struct {
