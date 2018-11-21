@@ -340,7 +340,7 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	case ctrlKey(tcell.KeyCtrlA):
 		e.cursor = 0
 	case ctrlKey(tcell.KeyCtrlE):
-		e.cursor = e.lastw
+		e.cursor = len(e.value)
 	case ctrlKey(tcell.KeyCtrlK):
 		e.kill()
 	case ctrlKey(tcell.KeyCtrlY):
