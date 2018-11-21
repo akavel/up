@@ -370,14 +370,13 @@ func (e *Editor) delete(dx int) {
 }
 
 func (e *Editor) kill() {
-	e.killspace = e.value[e.cursor:]
+	if e.cursor != len(e.value) {
+		e.killspace = append(e.killspace[:0], e.value[e.cursor:]...)
+	}
 	e.value = e.value[:e.cursor]
 }
 
 func (e *Editor) yank() {
-	if len(e.killspace) == 0 {
-		return
-	}
 	for _, r := range e.killspace {
 		e.insert(r)
 	}
