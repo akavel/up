@@ -328,22 +328,28 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	case key(tcell.KeyDelete):
 		e.delete(0)
 	case key(tcell.KeyLeft),
+		key(tcell.KeyCtrlB),
 		ctrlKey(tcell.KeyCtrlB):
 		if e.cursor > 0 {
 			e.cursor--
 		}
 	case key(tcell.KeyRight),
+		key(tcell.KeyCtrlF),
 		ctrlKey(tcell.KeyCtrlF):
 		if e.cursor < len(e.value) {
 			e.cursor++
 		}
-	case ctrlKey(tcell.KeyCtrlA):
+	case key(tcell.KeyCtrlA),
+		ctrlKey(tcell.KeyCtrlA):
 		e.cursor = 0
-	case ctrlKey(tcell.KeyCtrlE):
+	case key(tcell.KeyCtrlE),
+		ctrlKey(tcell.KeyCtrlE):
 		e.cursor = len(e.value)
-	case ctrlKey(tcell.KeyCtrlK):
+	case key(tcell.KeyCtrlK),
+		ctrlKey(tcell.KeyCtrlK):
 		e.kill()
-	case ctrlKey(tcell.KeyCtrlY):
+	case key(tcell.KeyCtrlY),
+		ctrlKey(tcell.KeyCtrlY):
 		e.yank()
 	default:
 		// Unknown key/combination, not handled
