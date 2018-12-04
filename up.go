@@ -36,7 +36,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const version = "0.3.1 (2018-10-31)"
+const version = "0.3.2 (2018-12-04)"
 
 // TODO: in case of error, show it in red (bg?), then below show again initial normal output (see also #4)
 // TODO: F1 should display help, and it should be multi-line, and scrolling licensing credits
@@ -283,9 +283,10 @@ func NewEditor(prompt string) *Editor {
 
 type Editor struct {
 	// TODO: make editor multiline. Reuse gocui or something for this?
-	prompt []rune
-	value  []rune
-	cursor int
+	prompt    []rune
+	value     []rune
+	killspace []rune
+	cursor    int
 	// lastw is length of value on last Draw; we need it to know how much to erase after backspace
 	lastw int
 }
@@ -326,14 +327,30 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 		e.delete(-1)
 	case key(tcell.KeyDelete):
 		e.delete(0)
-	case key(tcell.KeyLeft):
+	case key(tcell.KeyLeft),
+		key(tcell.KeyCtrlB),
+		ctrlKey(tcell.KeyCtrlB):
 		if e.cursor > 0 {
 			e.cursor--
 		}
-	case key(tcell.KeyRight):
+	case key(tcell.KeyRight),
+		key(tcell.KeyCtrlF),
+		ctrlKey(tcell.KeyCtrlF):
 		if e.cursor < len(e.value) {
 			e.cursor++
 		}
+	case key(tcell.KeyCtrlA),
+		ctrlKey(tcell.KeyCtrlA):
+		e.cursor = 0
+	case key(tcell.KeyCtrlE),
+		ctrlKey(tcell.KeyCtrlE):
+		e.cursor = len(e.value)
+	case key(tcell.KeyCtrlK),
+		ctrlKey(tcell.KeyCtrlK):
+		e.kill()
+	case key(tcell.KeyCtrlY),
+		ctrlKey(tcell.KeyCtrlY):
+		e.insert(e.killspace...)
 	default:
 		// Unknown key/combination, not handled
 		return false
@@ -341,12 +358,12 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	return true
 }
 
-func (e *Editor) insert(ch rune) {
-	// Insert character into value (https://github.com/golang/go/wiki/SliceTricks#insert)
-	e.value = append(e.value, 0)
-	copy(e.value[e.cursor+1:], e.value[e.cursor:])
-	e.value[e.cursor] = ch
-	e.cursor++
+func (e *Editor) insert(ch ...rune) {
+	// Based on https://github.com/golang/go/wiki/SliceTricks#insert
+	e.value = append(e.value, ch...)                     // = PREFIX + SUFFIX + (filler)
+	copy(e.value[e.cursor+len(ch):], e.value[e.cursor:]) // = PREFIX + (filler) + SUFFIX
+	copy(e.value[e.cursor:], ch)                         // = PREFIX + ch + SUFFIX
+	e.cursor += len(ch)
 }
 
 func (e *Editor) delete(dx int) {
@@ -356,6 +373,13 @@ func (e *Editor) delete(dx int) {
 	}
 	e.value = append(e.value[:pos], e.value[pos+1:]...)
 	e.cursor = pos
+}
+
+func (e *Editor) kill() {
+	if e.cursor != len(e.value) {
+		e.killspace = append(e.killspace[:0], e.value[e.cursor:]...)
+	}
+	e.value = e.value[:e.cursor]
 }
 
 type BufView struct {
