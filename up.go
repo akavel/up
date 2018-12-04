@@ -350,7 +350,7 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 		e.kill()
 	case key(tcell.KeyCtrlY),
 		ctrlKey(tcell.KeyCtrlY):
-		e.yank()
+		e.insert(e.killspace...)
 	default:
 		// Unknown key/combination, not handled
 		return false
@@ -358,12 +358,12 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	return true
 }
 
-func (e *Editor) insert(ch rune) {
-	// Insert character into value (https://github.com/golang/go/wiki/SliceTricks#insert)
-	e.value = append(e.value, 0)
-	copy(e.value[e.cursor+1:], e.value[e.cursor:])
-	e.value[e.cursor] = ch
-	e.cursor++
+func (e *Editor) insert(ch ...rune) {
+	// Based on https://github.com/golang/go/wiki/SliceTricks#insert
+	e.value = append(e.value, ch...)                     // = PREFIX + SUFFIX + (filler)
+	copy(e.value[e.cursor+len(ch):], e.value[e.cursor:]) // = PREFIX + (filler) + SUFFIX
+	copy(e.value[e.cursor:], ch)                         // = PREFIX + ch + SUFFIX
+	e.cursor += len(ch)
 }
 
 func (e *Editor) delete(dx int) {
@@ -380,12 +380,6 @@ func (e *Editor) kill() {
 		e.killspace = append(e.killspace[:0], e.value[e.cursor:]...)
 	}
 	e.value = e.value[:e.cursor]
-}
-
-func (e *Editor) yank() {
-	for _, r := range e.killspace {
-		e.insert(r)
-	}
 }
 
 type BufView struct {
