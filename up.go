@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/terminfo"
@@ -72,12 +73,14 @@ const version = "0.3.2 (2018-12-04)"
 var (
 	// TODO: dangerous? immediate? raw? unsafe? ...
 	// FIXME(akavel): mark the unsafe mode vs. safe mode with some colour or status; also inform/mark what command's results are displayed...
-	unsafeMode   = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
-	outputScript = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
-	debugMode    = pflag.Bool("debug", false, "debug mode")
+	autoRunDelayMilliseconds = pflag.Int("unsafe-full-throttle", 0, "enable mode in which command is executed immediately after any change (wait `delay` milliseconds if given)")
+	outputScript             = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
+	debugMode                = pflag.Bool("debug", false, "debug mode")
 )
 
 func main() {
+	pflag.Lookup("unsafe-full-throttle").NoOptDefVal = "0"
+
 	// Handle command-line flags
 	pflag.Parse()
 
@@ -89,6 +92,8 @@ func main() {
 		}
 		log.SetOutput(debug)
 	}
+
+	unsafeMode := pflag.Lookup("unsafe-full-throttle").Changed && *autoRunDelayMilliseconds == 0
 
 	// Find out what is the user's preferred login shell. This also allows user
 	// to choose the "engine" used for command execution.
@@ -144,11 +149,14 @@ func main() {
 	// Main loop
 	lastCommand := ""
 	restart := false
+	autoRunDelay := time.Duration(*autoRunDelayMilliseconds) * time.Millisecond
+
 	for {
 		// If user edited the command, immediately run it in background, and
 		// kill the previously running command.
 		command := commandEditor.String()
-		if restart || (*unsafeMode && command != lastCommand) {
+
+		if restart || (unsafeMode && command != lastCommand) {
 			commandSubprocess.Kill()
 			if command != "" {
 				commandSubprocess = StartSubprocess(shell, command, stdinCapture, func() { triggerRefresh(tui) })
@@ -175,8 +183,28 @@ func main() {
 		drawText(TuiRegion(tui, 0, h-1, w, 1), whiteOnBlue, message)
 		tui.Show()
 
+		var autoRunTimer *time.Timer
+		if command != lastCommand && autoRunDelay > 0 {
+			autoRunTimer = time.AfterFunc(autoRunDelay, func() {
+				log.Println("Firing interrupt - poll timed out")
+				tui.PostEvent(tcell.NewEventInterrupt("autoRunTimer"))
+			})
+		}
+
+		event := tui.PollEvent()
+		if autoRunTimer != nil {
+			autoRunTimer.Stop()
+		}
+
 		// Handle UI events
-		switch ev := tui.PollEvent().(type) {
+		switch ev := event.(type) {
+		case *tcell.EventInterrupt:
+			stringData, ok := ev.Data().(string)
+
+			if ok && stringData == "autoRunTimer" {
+				log.Printf("Got interrupt - poll timed out at %v", event.When())
+				restart = true
+			}
 		// Key pressed
 		case *tcell.EventKey:
 			// Is it a command editor key?
