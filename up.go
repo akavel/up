@@ -296,15 +296,15 @@ func (e *Editor) String() string { return string(e.value) }
 func (e *Editor) DrawTo(region Region, style tcell.Style, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
 	for i, ch := range e.prompt {
-		region.SetCell(i, 0, style, ch)
+		region.SetContent(i, 0, ch, nil, style)
 	}
 	for i, ch := range e.value {
-		region.SetCell(len(e.prompt)+i, 0, style, ch)
+		region.SetContent(len(e.prompt)+i, 0, ch, nil, style)
 	}
 
 	// Clear remains of last value if needed
 	for i := len(e.value); i < e.lastw; i++ {
-		region.SetCell(len(e.prompt)+i, 0, tcell.StyleDefault, ' ')
+		region.SetContent(len(e.prompt)+i, 0, ' ', nil, tcell.StyleDefault)
 	}
 	e.lastw = len(e.value)
 
@@ -419,7 +419,7 @@ func (v *BufView) DrawTo(region Region) {
 		if x >= region.W {
 			x, ch = region.W-1, '»'
 		}
-		region.SetCell(x, y, tcell.StyleDefault, ch)
+		region.SetContent(x, y, ch, nil, tcell.StyleDefault)
 	}
 	endline := func(x, y int) {
 		x -= v.X
@@ -431,7 +431,7 @@ func (v *BufView) DrawTo(region Region) {
 		}
 		lclip = false
 		for ; x < region.W; x++ {
-			region.SetCell(x, y, tcell.StyleDefault, ' ')
+			region.SetContent(x, y, ' ', nil, tcell.StyleDefault)
 		}
 	}
 
@@ -625,7 +625,7 @@ func (b *Buf) DrawStatus(region Region, style tcell.Style) {
 	}
 	b.mu.Unlock()
 
-	region.SetCell(0, 0, style, status)
+	region.SetContent(0, 0, status, nil, style)
 }
 
 func (b *Buf) NewReader(blocking bool) io.Reader {
@@ -775,15 +775,15 @@ fallback_print:
 
 type Region struct {
 	W, H    int
-	SetCell func(x, y int, style tcell.Style, ch rune)
+	SetContent func(x, y int, mainc rune, combc []rune, style tcell.Style)
 }
 
 func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
 	return Region{
 		W: w, H: h,
-		SetCell: func(dx, dy int, style tcell.Style, ch rune) {
+		SetContent: func(dx, dy int, mainc rune, combc []rune, style tcell.Style) {
 			if dx >= 0 && dx < w && dy >= 0 && dy < h {
-				tui.SetCell(x+dx, y+dy, style, ch)
+				tui.SetContent(x+dx, y+dy, mainc, combc, style)
 			}
 		},
 	}
@@ -796,6 +796,6 @@ var (
 
 func drawText(region Region, style tcell.Style, text string) {
 	for x, ch := range text {
-		region.SetCell(x, 0, style, ch)
+		region.SetContent(x, 0, ch, nil, style)
 	}
 }
