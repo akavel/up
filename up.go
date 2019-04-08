@@ -174,7 +174,7 @@ func main() {
 		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1), style,
 			func(x, y int) { tui.ShowCursor(x+1, 0) })
 		commandOutput.DrawTo(TuiRegion(tui, 0, 1, w, h-1))
-		drawText(TuiRegion(tui, 0, h-1, w, 1), whiteOnBlue, message)
+		drawText(TuiRegion(tui, 0, h-1, w, 1), 0, whiteOnBlue, message)
 		tui.Show()
 
 		// Handle UI events
@@ -796,24 +796,23 @@ var (
 	whiteOnDBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
 )
 
-func drawText(region Region, style tcell.Style, text string) {
+func drawText(region Region, x int, style tcell.Style, text string) {
 	// the primary non-zero width rune
 	var mainc rune
 	// the array that follows is a possible list of combining characters to append
 	combc := make([]rune, 0)
-    var pos int
 
 	for _, ch := range text {
 		if unicode.IsMark(ch) {
 			combc = append(combc, ch)
 		} else {
-			region.SetContent(pos, 0, mainc, combc, style)
-			pos += runewidth.RuneWidth(mainc)
+			region.SetContent(x, 0, mainc, combc, style)
+			x += runewidth.RuneWidth(mainc)
 			mainc, combc = ch, nil
 		}
 	}
 	// print the last character
 	if len(text) != 0 {
-		region.SetContent(pos, 0, mainc, combc, style)
+		region.SetContent(x, 0, mainc, combc, style)
 	}
 }
