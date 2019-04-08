@@ -429,17 +429,17 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	lclip := false
-	drawch := func(x, y int, ch rune) {
+	drawch := func(x, y int, mainc rune, combc []rune) {
 		if x <= v.X && v.X != 0 {
-			x, ch = 0, '«'
+			x, mainc = 0, '«'
 			lclip = true
 		} else {
 			x -= v.X
 		}
 		if x >= region.W {
-			x, ch = region.W-1, '»'
+			x, mainc = region.W-1, '»'
 		}
-		region.SetContent(x, y, ch, nil, tcell.StyleDefault)
+		region.SetContent(x, y, mainc, combc, tcell.StyleDefault)
 	}
 	endline := func(x, y int) {
 		x -= v.X
@@ -471,16 +471,16 @@ func (v *BufView) DrawTo(region Region) {
 			continue
 		case '\t':
 			const tabwidth = 8
-			drawch(x, y, ' ')
+			drawch(x, y, ' ', nil)
 			for x%tabwidth < (tabwidth - 1) {
 				x++
 				if x >= region.W {
 					break
 				}
-				drawch(x, y, ' ')
+				drawch(x, y, ' ', nil)
 			}
 		default:
-			drawch(x, y, ch)
+			drawch(x, y, ch, nil)
 		}
 		x++
 	}
