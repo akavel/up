@@ -297,22 +297,18 @@ func (e *Editor) String() string { return string(e.value) }
 
 func (e *Editor) DrawTo(region Region, style tcell.Style, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
-	for i, ch := range e.prompt {
-		region.SetContent(i, 0, ch, nil, style)
-	}
-	for i, ch := range e.value {
-		region.SetContent(len(e.prompt)+i, 0, ch, nil, style)
-	}
+	drawText(region, 0, style, string(e.prompt))
+	drawText(region, runewidth.StringWidth(string(e.prompt)), style, string(e.value))
 
 	// Clear remains of last value if needed
-	for i := len(e.value); i < e.lastw; i++ {
-		region.SetContent(len(e.prompt)+i, 0, ' ', nil, tcell.StyleDefault)
+	for i := runewidth.StringWidth(string(e.value)); i < e.lastw; i++ {
+		region.SetContent(runewidth.StringWidth(string(e.prompt))+i, 0, ' ', nil, tcell.StyleDefault)
 	}
-	e.lastw = len(e.value)
+	e.lastw = runewidth.StringWidth(string(e.value))
 
 	// Show cursor if requested
 	if setcursor != nil {
-		setcursor(len(e.prompt)+e.cursor, 0)
+		setcursor(runewidth.StringWidth(string(e.prompt))+runewidth.StringWidth(string(e.value[:e.cursor])), 0)
 	}
 }
 
