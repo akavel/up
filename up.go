@@ -328,14 +328,22 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	case key(tcell.KeyLeft),
 		key(tcell.KeyCtrlB),
 		ctrlKey(tcell.KeyCtrlB):
+		// move left until the previous primary rune
 		if e.cursor > 0 {
 			e.cursor--
+			for unicode.IsMark(rune(e.value[e.cursor])) {
+				e.cursor--
+			}
 		}
 	case key(tcell.KeyRight),
 		key(tcell.KeyCtrlF),
 		ctrlKey(tcell.KeyCtrlF):
+		// move right until the next primary rune or the end of line
 		if e.cursor < len(e.value) {
 			e.cursor++
+			for e.cursor < len(e.value) && unicode.IsMark(rune(e.value[e.cursor])) {
+				e.cursor++
+			}
 		}
 	case key(tcell.KeyCtrlA),
 		ctrlKey(tcell.KeyCtrlA):
