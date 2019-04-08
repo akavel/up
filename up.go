@@ -29,10 +29,12 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"unicode"
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/terminfo"
 	"github.com/mattn/go-isatty"
+	"github.com/mattn/go-runewidth"
 	"github.com/spf13/pflag"
 )
 
@@ -795,7 +797,23 @@ var (
 )
 
 func drawText(region Region, style tcell.Style, text string) {
-	for x, ch := range text {
-		region.SetContent(x, 0, ch, nil, style)
+	// the primary non-zero width rune
+	var mainc rune
+	// the array that follows is a possible list of combining characters to append
+	combc := make([]rune, 0)
+    var pos int
+
+	for _, ch := range text {
+		if unicode.IsMark(ch) {
+			combc = append(combc, ch)
+		} else {
+			region.SetContent(pos, 0, mainc, combc, style)
+			pos += runewidth.RuneWidth(mainc)
+			mainc, combc = ch, nil
+		}
+	}
+	// print the last character
+	if len(text) != 0 {
+		region.SetContent(pos, 0, mainc, combc, style)
 	}
 }
