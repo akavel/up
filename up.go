@@ -456,7 +456,11 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	x, y := 0, 0
-	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
+	// the primary non-zero width rune
+	var mainc rune
+	// the array that follows is a possible list of combining characters to append
+	combc := make([]rune, 0)
+
 	for {
 		ch, _, err := r.ReadRune()
 		if y >= region.H || err == io.EOF {
@@ -464,25 +468,50 @@ func (v *BufView) DrawTo(region Region) {
 		} else if err != nil {
 			panic(err)
 		}
-		switch ch {
-		case '\n':
-			endline(x, y)
-			x, y = 0, y+1
-			continue
-		case '\t':
-			const tabwidth = 8
-			drawch(x, y, ' ', nil)
-			for x%tabwidth < (tabwidth - 1) {
-				x++
-				if x >= region.W {
-					break
-				}
+
+		if unicode.IsMark(ch) {
+			combc = append(combc, ch)
+		} else {
+			switch mainc {
+			case '\t':
+				const tabwidth = 8
 				drawch(x, y, ' ', nil)
+				for x%tabwidth < (tabwidth - 1) {
+					x++
+					if x >= region.W {
+						break
+					}
+					drawch(x, y, ' ', nil)
+				}
+			default:
+				drawch(x, y, mainc, combc)
+				x += runewidth.RuneWidth(mainc)
+				if ch == '\n' {
+					endline(x, y)
+					x, y = 0, y+1
+				}
 			}
-		default:
-			drawch(x, y, ch, nil)
+			mainc, combc = ch, nil
 		}
-		x++
+	}
+
+	// print the last character
+	switch mainc {
+	case '\n':
+		endline(x, y)
+		x, y = 0, y+1
+	case '\t':
+		const tabwidth = 8
+		drawch(x, y, ' ', nil)
+		for x%tabwidth < (tabwidth - 1) {
+			x++
+			if x >= region.W {
+				break
+			}
+			drawch(x, y, ' ', nil)
+		}
+	default:
+		drawch(x, y, mainc, combc)
 	}
 	for ; y < region.H; y++ {
 		endline(x, y)
