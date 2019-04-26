@@ -331,7 +331,7 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 		// move left until the previous primary rune
 		if e.cursor > 0 {
 			e.cursor--
-			for unicode.IsMark(rune(e.value[e.cursor])) {
+			for e.cursor > 0 && unicode.IsMark(e.value[e.cursor]) {
 				e.cursor--
 			}
 		}
