@@ -341,7 +341,7 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 		// move right until the next primary rune or the end of line
 		if e.cursor < len(e.value) {
 			e.cursor++
-			for e.cursor < len(e.value) && unicode.IsMark(rune(e.value[e.cursor])) {
+			for e.cursor < len(e.value) && unicode.IsMark(e.value[e.cursor]) {
 				e.cursor++
 			}
 		}
