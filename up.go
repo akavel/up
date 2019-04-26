@@ -431,13 +431,13 @@ func (v *BufView) DrawTo(region Region) {
 	lclip := false
 	drawch := func(x, y int, mainc rune, combc []rune) {
 		if x <= v.X && v.X != 0 {
-			x, mainc = 0, '«'
+			x, mainc, combc = 0, '«', nil
 			lclip = true
 		} else {
 			x -= v.X
 		}
 		if x >= region.W {
-			x, mainc = region.W-1, '»'
+			x, mainc, combc = region.W-1, '»', nil
 		}
 		region.SetContent(x, y, mainc, combc, tcell.StyleDefault)
 	}
