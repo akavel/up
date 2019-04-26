@@ -297,18 +297,18 @@ func (e *Editor) String() string { return string(e.value) }
 
 func (e *Editor) DrawTo(region Region, style tcell.Style, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
-	drawText(region, 0, style, []rune(e.prompt))
-	drawText(region, runewidth.StringWidth(string(e.prompt)), style, []rune(e.value))
+	wprompt := drawText(region, 0, style, e.prompt)
+	wvalue := drawText(region, wprompt, style, e.value)
 
 	// Clear remains of last value if needed
-	for i := runewidth.StringWidth(string(e.value)); i < e.lastw; i++ {
-		region.SetContent(runewidth.StringWidth(string(e.prompt))+i, 0, ' ', nil, tcell.StyleDefault)
+	for i := wvalue; i < e.lastw; i++ {
+		region.SetContent(wprompt+i, 0, ' ', nil, tcell.StyleDefault)
 	}
-	e.lastw = runewidth.StringWidth(string(e.value))
+	e.lastw = wvalue
 
 	// Show cursor if requested
 	if setcursor != nil {
-		setcursor(runewidth.StringWidth(string(e.prompt))+runewidth.StringWidth(string(e.value[:e.cursor])), 0)
+		setcursor(wprompt+runewidth.StringWidth(string(e.value[:e.cursor])), 0)
 	}
 }
 
@@ -843,23 +843,23 @@ var (
 	whiteOnDBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
 )
 
-func drawText(region Region, x int, style tcell.Style, text []rune) {
-	// the primary non-zero width rune
-	var mainc rune
-	// the array that follows is a possible list of combining characters to append
-	combc := make([]rune, 0)
-
-	for _, ch := range text {
-		if unicode.IsMark(ch) {
-			combc = append(combc, ch)
-		} else {
-			region.SetContent(x, 0, mainc, combc, style)
-			x += runewidth.RuneWidth(mainc)
-			mainc, combc = ch, nil
+func drawText(region Region, x int, style tcell.Style, text []rune) int {
+	w := 0
+	// a combining character sequence, see: http://unicode.org/faq/char_combmark.html
+	seq := []rune{}
+	drawSeq := func() {
+		if len(seq) > 0 {
+			region.SetContent(x+w, 0, seq[0], seq[1:], style)
+			w += runewidth.RuneWidth(seq[0])
 		}
 	}
-	// print the last character
-	if len(text) != 0 {
-		region.SetContent(x, 0, mainc, combc, style)
+	for _, ch := range text {
+		if !unicode.IsMark(ch) {
+			drawSeq()
+			seq = seq[:0]
+		}
+		seq = append(seq, ch)
 	}
+	drawSeq()
+	return w
 }
