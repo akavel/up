@@ -174,7 +174,7 @@ func main() {
 		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1), style,
 			func(x, y int) { tui.ShowCursor(x+1, 0) })
 		commandOutput.DrawTo(TuiRegion(tui, 0, 1, w, h-1))
-		drawText(TuiRegion(tui, 0, h-1, w, 1), 0, whiteOnBlue, message)
+		drawText(TuiRegion(tui, 0, h-1, w, 1), 0, whiteOnBlue, []rune(message))
 		tui.Show()
 
 		// Handle UI events
@@ -297,8 +297,8 @@ func (e *Editor) String() string { return string(e.value) }
 
 func (e *Editor) DrawTo(region Region, style tcell.Style, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
-	drawText(region, 0, style, string(e.prompt))
-	drawText(region, runewidth.StringWidth(string(e.prompt)), style, string(e.value))
+	drawText(region, 0, style, []rune(e.prompt))
+	drawText(region, runewidth.StringWidth(string(e.prompt)), style, []rune(e.value))
 
 	// Clear remains of last value if needed
 	for i := runewidth.StringWidth(string(e.value)); i < e.lastw; i++ {
@@ -843,7 +843,7 @@ var (
 	whiteOnDBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
 )
 
-func drawText(region Region, x int, style tcell.Style, text string) {
+func drawText(region Region, x int, style tcell.Style, text []rune) {
 	// the primary non-zero width rune
 	var mainc rune
 	// the array that follows is a possible list of combining characters to append
