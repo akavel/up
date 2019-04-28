@@ -424,7 +424,7 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	lclip := false
-    drawSeq := func(x, y int, seq []rune) {
+	drawSeq := func(x, y int, seq []rune) {
 		if x <= v.X && v.X != 0 {
 			x, seq[0] = 0, '«'
 			lclip = true
@@ -454,7 +454,7 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	x, y := 0, 0
-    // a possible list of combining characters
+	// a possible list of combining characters
 	seq := []rune{}
 	for {
 		ch, _, err := r.ReadRune()
@@ -823,7 +823,7 @@ fallback_print:
 }
 
 type Region struct {
-	W, H    int
+	W, H       int
 	SetContent func(x, y int, mainc rune, combc []rune, style tcell.Style)
 }
 
@@ -845,7 +845,7 @@ var (
 
 func drawText(region Region, x int, style tcell.Style, text []rune) int {
 	w := 0
-    // a possible list of combining characters
+	// a possible list of combining characters
 	seq := []rune{}
 	drawSeq := func() {
 		if len(seq) > 0 {
