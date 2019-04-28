@@ -373,25 +373,20 @@ func (e *Editor) insert(ch ...rune) {
 }
 
 func (e *Editor) delete(dx int) {
-	if e.cursor == 0 {
-		return
-	}
-
-	// count the actual delta of e.cursor, taking combining characters into account
-	rune_dx := 0
-	for ; dx < 0; rune_dx-- {
-		if unicode.IsMark(rune(e.value[e.cursor+rune_dx-1])) {
-			continue
-		} else {
-			dx++
-		}
-	}
-
-	pos := e.cursor + rune_dx
+	pos := e.cursor + dx
 	if pos < 0 || pos >= len(e.value) {
 		return
 	}
-	e.value = append(e.value[:pos], e.value[pos-rune_dx:]...)
+	nextpos := pos + 1
+	for nextpos < len(e.value) && unicode.IsMark(e.value[nextpos]) {
+		nextpos++
+	}
+
+	for pos > 0 && unicode.IsMark(e.value[pos]) {
+		pos--
+	}
+
+	e.value = append(e.value[:pos], e.value[nextpos:]...)
 	e.cursor = pos
 }
 
