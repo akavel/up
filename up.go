@@ -29,10 +29,12 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"unicode"
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/terminfo"
 	"github.com/mattn/go-isatty"
+	"github.com/mattn/go-runewidth"
 	"github.com/spf13/pflag"
 )
 
@@ -172,7 +174,7 @@ func main() {
 		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1), style,
 			func(x, y int) { tui.ShowCursor(x+1, 0) })
 		commandOutput.DrawTo(TuiRegion(tui, 0, 1, w, h-1))
-		drawText(TuiRegion(tui, 0, h-1, w, 1), whiteOnBlue, message)
+		drawText(TuiRegion(tui, 0, h-1, w, 1), 0, whiteOnBlue, []rune(message))
 		tui.Show()
 
 		// Handle UI events
@@ -295,22 +297,18 @@ func (e *Editor) String() string { return string(e.value) }
 
 func (e *Editor) DrawTo(region Region, style tcell.Style, setcursor func(x, y int)) {
 	// Draw prompt & the edited value - use white letters on blue background
-	for i, ch := range e.prompt {
-		region.SetCell(i, 0, style, ch)
-	}
-	for i, ch := range e.value {
-		region.SetCell(len(e.prompt)+i, 0, style, ch)
-	}
+	wprompt := drawText(region, 0, style, e.prompt)
+	wvalue := drawText(region, wprompt, style, e.value)
 
 	// Clear remains of last value if needed
-	for i := len(e.value); i < e.lastw; i++ {
-		region.SetCell(len(e.prompt)+i, 0, tcell.StyleDefault, ' ')
+	for i := wvalue; i < e.lastw; i++ {
+		region.SetContent(wprompt+i, 0, ' ', nil, tcell.StyleDefault)
 	}
-	e.lastw = len(e.value)
+	e.lastw = wvalue
 
 	// Show cursor if requested
 	if setcursor != nil {
-		setcursor(len(e.prompt)+e.cursor, 0)
+		setcursor(wprompt+runewidth.StringWidth(string(e.value[:e.cursor])), 0)
 	}
 }
 
@@ -330,14 +328,22 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	case key(tcell.KeyLeft),
 		key(tcell.KeyCtrlB),
 		ctrlKey(tcell.KeyCtrlB):
+		// move left until the previous primary rune
 		if e.cursor > 0 {
 			e.cursor--
+			for e.cursor > 0 && unicode.IsMark(e.value[e.cursor]) {
+				e.cursor--
+			}
 		}
 	case key(tcell.KeyRight),
 		key(tcell.KeyCtrlF),
 		ctrlKey(tcell.KeyCtrlF):
+		// move right until the next primary rune or the end of line
 		if e.cursor < len(e.value) {
 			e.cursor++
+			for e.cursor < len(e.value) && unicode.IsMark(e.value[e.cursor]) {
+				e.cursor++
+			}
 		}
 	case key(tcell.KeyCtrlA),
 		ctrlKey(tcell.KeyCtrlA):
@@ -371,7 +377,16 @@ func (e *Editor) delete(dx int) {
 	if pos < 0 || pos >= len(e.value) {
 		return
 	}
-	e.value = append(e.value[:pos], e.value[pos+1:]...)
+	nextpos := pos + 1
+	for nextpos < len(e.value) && unicode.IsMark(e.value[nextpos]) {
+		nextpos++
+	}
+
+	for pos > 0 && unicode.IsMark(e.value[pos]) {
+		pos--
+	}
+
+	e.value = append(e.value[:pos], e.value[nextpos:]...)
 	e.cursor = pos
 }
 
@@ -409,18 +424,21 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	lclip := false
-	drawch := func(x, y int, ch rune) {
+	drawSeq := func(x, y int, seq []rune) {
 		if x <= v.X && v.X != 0 {
-			x, ch = 0, '«'
+			x, seq[0] = 0, '«'
 			lclip = true
 		} else {
 			x -= v.X
 		}
+
 		if x >= region.W {
-			x, ch = region.W-1, '»'
+			x, seq[0] = region.W-1, '»'
 		}
-		region.SetCell(x, y, tcell.StyleDefault, ch)
+
+		region.SetContent(x, y, seq[0], seq[1:], tcell.StyleDefault)
 	}
+
 	endline := func(x, y int) {
 		x -= v.X
 		if x < 0 {
@@ -431,12 +449,13 @@ func (v *BufView) DrawTo(region Region) {
 		}
 		lclip = false
 		for ; x < region.W; x++ {
-			region.SetCell(x, y, tcell.StyleDefault, ' ')
+			region.SetContent(x, y, ' ', nil, tcell.StyleDefault)
 		}
 	}
 
 	x, y := 0, 0
-	// TODO: handle runes properly, including their visual width (mattn/go-runewidth)
+	// a possible list of combining characters
+	seq := []rune{}
 	for {
 		ch, _, err := r.ReadRune()
 		if y >= region.H || err == io.EOF {
@@ -444,25 +463,55 @@ func (v *BufView) DrawTo(region Region) {
 		} else if err != nil {
 			panic(err)
 		}
-		switch ch {
+
+		if !unicode.IsMark(ch) {
+			if len(seq) > 0 {
+				switch seq[0] {
+				case '\t':
+					const tabwidth = 8
+					drawSeq(x, y, []rune{' '})
+					for x%tabwidth < (tabwidth - 1) {
+						x++
+						if x >= region.W {
+							break
+						}
+						drawSeq(x, y, []rune{' '})
+					}
+				default:
+					drawSeq(x, y, seq)
+					x += runewidth.RuneWidth(seq[0])
+				}
+				seq = seq[:0]
+			}
+
+			if ch == '\n' {
+				endline(x, y)
+				x, y = 0, y+1
+				continue
+			}
+		}
+		seq = append(seq, ch)
+	}
+
+	// print the last character
+	if len(seq) > 0 {
+		switch seq[0] {
 		case '\n':
 			endline(x, y)
 			x, y = 0, y+1
-			continue
 		case '\t':
 			const tabwidth = 8
-			drawch(x, y, ' ')
+			drawSeq(x, y, []rune{' '})
 			for x%tabwidth < (tabwidth - 1) {
 				x++
 				if x >= region.W {
 					break
 				}
-				drawch(x, y, ' ')
+				drawSeq(x, y, []rune{' '})
 			}
 		default:
-			drawch(x, y, ch)
+			drawSeq(x, y, seq)
 		}
-		x++
 	}
 	for ; y < region.H; y++ {
 		endline(x, y)
@@ -625,7 +674,7 @@ func (b *Buf) DrawStatus(region Region, style tcell.Style) {
 	}
 	b.mu.Unlock()
 
-	region.SetCell(0, 0, style, status)
+	region.SetContent(0, 0, status, nil, style)
 }
 
 func (b *Buf) NewReader(blocking bool) io.Reader {
@@ -774,16 +823,16 @@ fallback_print:
 }
 
 type Region struct {
-	W, H    int
-	SetCell func(x, y int, style tcell.Style, ch rune)
+	W, H       int
+	SetContent func(x, y int, mainc rune, combc []rune, style tcell.Style)
 }
 
 func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
 	return Region{
 		W: w, H: h,
-		SetCell: func(dx, dy int, style tcell.Style, ch rune) {
+		SetContent: func(dx, dy int, mainc rune, combc []rune, style tcell.Style) {
 			if dx >= 0 && dx < w && dy >= 0 && dy < h {
-				tui.SetCell(x+dx, y+dy, style, ch)
+				tui.SetContent(x+dx, y+dy, mainc, combc, style)
 			}
 		},
 	}
@@ -794,8 +843,23 @@ var (
 	whiteOnDBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
 )
 
-func drawText(region Region, style tcell.Style, text string) {
-	for x, ch := range text {
-		region.SetCell(x, 0, style, ch)
+func drawText(region Region, x int, style tcell.Style, text []rune) int {
+	w := 0
+	// a possible list of combining characters
+	seq := []rune{}
+	drawSeq := func() {
+		if len(seq) > 0 {
+			region.SetContent(x+w, 0, seq[0], seq[1:], style)
+			w += runewidth.RuneWidth(seq[0])
+		}
 	}
+	for _, ch := range text {
+		if !unicode.IsMark(ch) {
+			drawSeq()
+			seq = seq[:0]
+		}
+		seq = append(seq, ch)
+	}
+	drawSeq()
+	return w
 }
