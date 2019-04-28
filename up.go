@@ -424,18 +424,21 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	lclip := false
-	drawch := func(x, y int, mainc rune, combc []rune) {
+    drawSeq := func(x, y int, seq []rune) {
 		if x <= v.X && v.X != 0 {
-			x, mainc, combc = 0, '«', nil
+			x, seq[0] = 0, '«'
 			lclip = true
 		} else {
 			x -= v.X
 		}
+
 		if x >= region.W {
-			x, mainc, combc = region.W-1, '»', nil
+			x, seq[0] = region.W-1, '»'
 		}
-		region.SetContent(x, y, mainc, combc, tcell.StyleDefault)
+
+		region.SetContent(x, y, seq[0], seq[1:], tcell.StyleDefault)
 	}
+
 	endline := func(x, y int) {
 		x -= v.X
 		if x < 0 {
@@ -451,11 +454,8 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	x, y := 0, 0
-	// the primary non-zero width rune
-	var mainc rune
-	// the array that follows is a possible list of combining characters to append
-	combc := make([]rune, 0)
-
+	// a combining character sequence, see: http://unicode.org/faq/char_combmark.html
+	seq := []rune{}
 	for {
 		ch, _, err := r.ReadRune()
 		if y >= region.H || err == io.EOF {
@@ -464,49 +464,54 @@ func (v *BufView) DrawTo(region Region) {
 			panic(err)
 		}
 
-		if unicode.IsMark(ch) {
-			combc = append(combc, ch)
-		} else {
-			switch mainc {
-			case '\t':
-				const tabwidth = 8
-				drawch(x, y, ' ', nil)
-				for x%tabwidth < (tabwidth - 1) {
-					x++
-					if x >= region.W {
-						break
+		if !unicode.IsMark(ch) {
+			if len(seq) > 0 {
+				switch seq[0] {
+				case '\t':
+					const tabwidth = 8
+					drawSeq(x, y, []rune{' '})
+					for x%tabwidth < (tabwidth - 1) {
+						x++
+						if x >= region.W {
+							break
+						}
+						drawSeq(x, y, []rune{' '})
 					}
-					drawch(x, y, ' ', nil)
+				default:
+					drawSeq(x, y, seq)
+					x += runewidth.RuneWidth(seq[0])
 				}
-			default:
-				drawch(x, y, mainc, combc)
-				x += runewidth.RuneWidth(mainc)
-				if ch == '\n' {
-					endline(x, y)
-					x, y = 0, y+1
-				}
+				seq = seq[:0]
 			}
-			mainc, combc = ch, nil
+
+			if ch == '\n' {
+				endline(x, y)
+				x, y = 0, y+1
+				continue
+			}
 		}
+		seq = append(seq, ch)
 	}
 
 	// print the last character
-	switch mainc {
-	case '\n':
-		endline(x, y)
-		x, y = 0, y+1
-	case '\t':
-		const tabwidth = 8
-		drawch(x, y, ' ', nil)
-		for x%tabwidth < (tabwidth - 1) {
-			x++
-			if x >= region.W {
-				break
+	if len(seq) > 0 {
+		switch seq[0] {
+		case '\n':
+			endline(x, y)
+			x, y = 0, y+1
+		case '\t':
+			const tabwidth = 8
+			drawSeq(x, y, []rune{' '})
+			for x%tabwidth < (tabwidth - 1) {
+				x++
+				if x >= region.W {
+					break
+				}
+				drawSeq(x, y, []rune{' '})
 			}
-			drawch(x, y, ' ', nil)
+		default:
+			drawSeq(x, y, seq)
 		}
-	default:
-		drawch(x, y, mainc, combc)
 	}
 	for ; y < region.H; y++ {
 		endline(x, y)
