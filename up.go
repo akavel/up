@@ -454,7 +454,7 @@ func (v *BufView) DrawTo(region Region) {
 	}
 
 	x, y := 0, 0
-	// a combining character sequence, see: http://unicode.org/faq/char_combmark.html
+    // a possible list of combining characters
 	seq := []rune{}
 	for {
 		ch, _, err := r.ReadRune()
@@ -845,7 +845,7 @@ var (
 
 func drawText(region Region, x int, style tcell.Style, text []rune) int {
 	w := 0
-	// a combining character sequence, see: http://unicode.org/faq/char_combmark.html
+    // a possible list of combining characters
 	seq := []rune{}
 	drawSeq := func() {
 		if len(seq) > 0 {
