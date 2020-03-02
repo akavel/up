@@ -75,6 +75,7 @@ var (
 	unsafeMode   = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
 	outputScript = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
 	debugMode    = pflag.Bool("debug", false, "debug mode")
+	noColors     = pflag.Bool("no-colors", false, "disable interface colors")
 )
 
 func main() {
@@ -783,6 +784,9 @@ func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
 		W: w, H: h,
 		SetCell: func(dx, dy int, style tcell.Style, ch rune) {
 			if dx >= 0 && dx < w && dy >= 0 && dy < h {
+				if *noColors {
+					style = tcell.StyleDefault
+				}
 				tui.SetCell(x+dx, y+dy, style, ch)
 			}
 		},
