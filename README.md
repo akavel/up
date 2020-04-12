@@ -134,3 +134,8 @@ then:
 
 — *Mateusz Czapliński*  
 *October 2018*
+
+*PS. The UP logo was conceived and generously sponsored
+by [Thoai Nguyen](https://github.com/thoaionline)
+and [GPU Exchange](https://gpu.exchange/),
+with a helping hand from [Many Pixels](https://www.manypixels.co/).*
