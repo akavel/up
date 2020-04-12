@@ -1,3 +1,5 @@
+<img align="left" width="183" height="154" src="logo.svg" />
+
 # up - the Ultimate Plumber
 
 **up** is the **Ultimate Plumber**, a tool for writing Linux pipes in a
@@ -132,3 +134,8 @@ then:
 
 — *Mateusz Czapliński*  
 *October 2018*
+
+*PS. The UP logo was conceived and generously sponsored
+by [Thoai Nguyen](https://github.com/thoaionline)
+and [GPU Exchange](https://gpu.exchange/),
+with a helping hand from [Many Pixels](https://www.manypixels.co/).*
