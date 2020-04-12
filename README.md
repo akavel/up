@@ -1,3 +1,7 @@
+<p align="center">
+<img src="logo.svg" />
+</p>
+
 # up - the Ultimate Plumber
 
 **up** is the **Ultimate Plumber**, a tool for writing Linux pipes in a
