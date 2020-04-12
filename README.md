@@ -1,6 +1,6 @@
 # up - the Ultimate Plumber
 
-<img width="20%" height="20%" src="logo.svg" />
+<img align="right" width="20%" height="20%" src="logo.svg" />
 
 **up** is the **Ultimate Plumber**, a tool for writing Linux pipes in a
 terminal-based UI interactively, with instant live preview of command results.
