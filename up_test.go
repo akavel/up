@@ -2,8 +2,8 @@ package main
 
 import "testing"
 
-func Test_Editor_insert(test *testing.T) {
-	cases := []struct {
+func Test_Editor_insert(t *testing.T) {
+	tests := []struct {
 		comment   string
 		e         Editor
 		insert    []rune
@@ -74,10 +74,10 @@ func Test_Editor_insert(test *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		c.e.insert(c.insert...)
-		if string(c.e.value) != string(c.wantValue) {
-			test.Errorf("%q: bad value\nwant: %q\nhave: %q", c.comment, c.wantValue, c.e.value)
+	for _, tt := range tests {
+		tt.e.insert(tt.insert...)
+		if string(tt.e.value) != string(tt.wantValue) {
+			t.Errorf("%q: bad value\nwant: %q\nhave: %q", tt.comment, tt.wantValue, tt.e.value)
 		}
 	}
 }
