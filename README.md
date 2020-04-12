@@ -1,5 +1,5 @@
 <p align="center">
-<img src="logo.svg" />
+<img width="20%" height="20%" src="logo.svg" />
 </p>
 
 # up - the Ultimate Plumber
