@@ -1,4 +1,4 @@
-<img align="left" width="20%" height="20%" src="logo.svg" />
+<img align="left" width="183" height="154" src="logo.svg" />
 
 # up - the Ultimate Plumber
 
