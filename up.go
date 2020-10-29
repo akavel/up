@@ -78,6 +78,7 @@ var (
 	noColors     = pflag.Bool("no-colors", false, "disable interface colors")
 	shellFlag    = pflag.StringArrayP("exec", "e", nil, "`command` to pass $PIPELINE through; use multiple times to pass multi-word command; defaults to '-e=$SHELL -e=-c'")
 	initialCmd   = pflag.StringP("pipeline", "c", "", "initial command to use as $PIPELINE - editable later")
+	bufsize      = pflag.Int("buf", 40, "input buffer size & pipeline buffer sizes in `megabytes` (MiB)")
 )
 
 func main() {
@@ -138,7 +139,8 @@ func main() {
 		// We capture data piped to 'up' on standard input into an internal buffer
 		// When some new data shows up on stdin, we raise a custom signal,
 		// so that main loop will refresh the buffers and the output.
-		stdinCapture = NewBuf().StartCapturing(os.Stdin, func() { triggerRefresh(tui) })
+		stdinCapture = NewBuf(*bufsize*1024*1024).
+				StartCapturing(os.Stdin, func() { triggerRefresh(tui) })
 		// Then, we pass this data as input to a subprocess.
 		// Initially, no subprocess is running, as no command is entered yet
 		commandSubprocess *Subprocess = nil
@@ -543,9 +545,8 @@ func count(r io.Reader, b byte) (n int) {
 	}
 }
 
-func NewBuf() *Buf {
+func NewBuf(bufsize int) *Buf {
 	// TODO: make buffer size dynamic (growable by pressing a key)
-	const bufsize = 40 * 1024 * 1024 // 40 MB
 	buf := &Buf{bytes: make([]byte, bufsize)}
 	buf.cond = sync.NewCond(&buf.mu)
 	return buf
@@ -676,7 +677,7 @@ func StartSubprocess(shell []string, command string, stdin *Buf, notify func()) 
 	ctx, cancel := context.WithCancel(context.TODO())
 	r, w := io.Pipe()
 	p := &Subprocess{
-		Buf:    NewBuf().StartCapturing(r, notify),
+		Buf:    NewBuf(len(stdin.bytes)).StartCapturing(r, notify),
 		cancel: cancel,
 	}
 
