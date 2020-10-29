@@ -72,7 +72,7 @@ const version = "0.3.2 (2018-12-04)"
 
 func init() {
 	pflag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `Usage: COMMAND | up [OPTIONS]
+		fmt.Fprint(os.Stderr, `Usage: COMMAND | up [OPTIONS]
 
 up is the Ultimate Plumber, a tool for writing Linux pipes in a terminal-based
 UI interactively, with instant live preview of command results.
@@ -113,6 +113,10 @@ KEYS
 OPTIONS
 `)
 		pflag.PrintDefaults()
+		fmt.Fprint(os.Stderr, `
+HOMEPAGE: https://github.com/akavel/up
+VERSION: `+version+`
+`)
 	}
 	pflag.ErrHelp = errors.New("") // TODO: or something else?
 }
