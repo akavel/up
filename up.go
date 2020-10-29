@@ -131,6 +131,7 @@ var (
 	shellFlag    = pflag.StringArrayP("exec", "e", nil, "`command` to run pipeline with; repeat multiple times to pass multi-word command; defaults to '-e=$SHELL -e=-c'")
 	initialCmd   = pflag.StringP("pipeline", "c", "", "initial `commands` to use as pipeline (default empty)")
 	bufsize      = pflag.Int("buf", 40, "input buffer size & pipeline buffer sizes in `megabytes` (MiB)")
+	noinput      = pflag.Bool("noinput", false, "start with empty buffer regardless if any input was provided")
 )
 
 func main() {
@@ -171,6 +172,15 @@ func main() {
 	}
 	log.Println("found shell:", shell)
 
+	stdin := io.Reader(os.Stdin)
+	if *noinput {
+		stdin = bytes.NewReader(nil)
+	} else if isatty.IsTerminal(os.Stdin.Fd()) {
+		// TODO: Without this block, we'd hang when nothing is piped on input (see
+		// github.com/peco/peco, mattn/gof, fzf, etc.)
+		die("up requires some data piped on standard input, for example try: `echo hello world | up`")
+	}
+
 	// Initialize TUI infrastructure
 	tui := initTUI()
 	defer tui.Fini()
@@ -192,7 +202,7 @@ func main() {
 		// When some new data shows up on stdin, we raise a custom signal,
 		// so that main loop will refresh the buffers and the output.
 		stdinCapture = NewBuf(*bufsize*1024*1024).
-				StartCapturing(os.Stdin, func() { triggerRefresh(tui) })
+				StartCapturing(stdin, func() { triggerRefresh(tui) })
 		// Then, we pass this data as input to a subprocess.
 		// Initially, no subprocess is running, as no command is entered yet
 		commandSubprocess *Subprocess = nil
@@ -285,13 +295,6 @@ func main() {
 }
 
 func initTUI() tcell.Screen {
-	// TODO: Without below block, we'd hang when nothing is piped on input (see
-	// github.com/peco/peco, mattn/gof, fzf, etc.)
-	if isatty.IsTerminal(os.Stdin.Fd()) {
-		die("up requires some data piped on standard input, for example try: `echo hello world | up`")
-	}
-
-	// Init TUI code
 	// TODO: maybe try gocui or termbox?
 	tui, err := tcell.NewScreen()
 	if err == terminfo.ErrTermNotFound {
