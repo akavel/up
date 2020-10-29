@@ -77,6 +77,7 @@ var (
 	debugMode    = pflag.Bool("debug", false, "debug mode")
 	noColors     = pflag.Bool("no-colors", false, "disable interface colors")
 	shellFlag    = pflag.StringArrayP("exec", "e", nil, "`command` to pass $PIPELINE through; use multiple times to pass multi-word command; defaults to '-e=$SHELL -e=-c'")
+	initialCmd   = pflag.StringP("pipeline", "c", "", "initial command to use as $PIPELINE - editable later")
 )
 
 func main() {
@@ -125,7 +126,7 @@ func main() {
 	var (
 		// The top line of the TUI is an editable command, which will be used
 		// as a pipeline for data we read from stdin
-		commandEditor = NewEditor("| ")
+		commandEditor = NewEditor("| ", *initialCmd)
 		// The rest of the screen is a view of the results of the command
 		commandOutput = BufView{}
 		// Sometimes, a message may be displayed at the bottom of the screen, with help or other info
@@ -281,8 +282,14 @@ func die(message string) {
 	os.Exit(1)
 }
 
-func NewEditor(prompt string) *Editor {
-	return &Editor{prompt: []rune(prompt)}
+func NewEditor(prompt, value string) *Editor {
+	v := []rune(value)
+	return &Editor{
+		prompt: []rune(prompt),
+		value:  v,
+		cursor: len(v),
+		lastw:  len(v),
+	}
 }
 
 type Editor struct {
