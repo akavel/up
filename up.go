@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -69,15 +70,62 @@ const version = "0.3.2 (2018-12-04)"
 // TODO: [LATER] jump between buffers saved from earlier pipe fragments; OR: allow saving/recalling "snapshots" of (cmd, results) pairs (see also #4)
 // TODO: [LATER] ^-, U -- to switch to "unsafe mode"? -u to switch back? + some visual marker
 
+func init() {
+	pflag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `Usage: COMMAND | up [OPTIONS]
+
+up is the Ultimate Plumber, a tool for writing Linux pipes in a terminal-based
+UI interactively, with instant live preview of command results.
+
+To start using up, redirect any text-emitting command (or pipeline) into it -
+for example:
+
+    $ lshw |& ./up
+
+Ultimate Plumber then opens a full-screen terminal app. The top line of the
+screen can be edited in order to interactively build a pipeline. Every time you
+hit [Enter], the bottom of the screen will display the results of passing the
+up's standard input through the pipeline (executed using your default $SHELL).
+
+If a tilde '~' is visible in top-left corner, it indicates that Ultimate
+Plumber did not yet fully consume its input. Some pipelines may not finish with
+incomplete input; use Ctrl-S to freeze reading the input and to inject fake
+EOF; use Ctrl-Q to unfreeze back and continue reading.
+
+If a plus '+' is visible in top-left corner, the internal buffer limit
+(default: 40MB) was reached and Ultimate Plumber won't read more input.
+
+KEYS
+
+- alphanumeric & symbol keys, Left, Right, Ctrl-A/E/B/F/K/Y
+                      - navigate and edit the pipeline command
+- Enter   - execute the pipeline command, updating the pipeline output panel
+- Up, Dn, PgUp, PgDn, Ctrl-Left, Ctrl-Right
+                      - navigate (scroll) the pipeline output panel
+- Ctrl-X  - exit and write the pipeline to up1.sh (or if it exists then to
+            up2.sh, etc. till up1000.sh)
+- Ctrl-C  - quit without saving and emit the pipeline on standard output
+- Ctrl-S  - temporarily freeze a long-running input to Ultimate Plumber,
+            injecting a fake EOF into the buffer (shows '#' indicator in
+            top-left corner)
+- Ctrl-Q  - unfreeze back after Ctrl-S (disables '#' indicator)
+
+OPTIONS
+`)
+		pflag.PrintDefaults()
+	}
+	pflag.ErrHelp = errors.New("") // TODO: or something else?
+}
+
 var (
 	// TODO: dangerous? immediate? raw? unsafe? ...
 	// FIXME(akavel): mark the unsafe mode vs. safe mode with some colour or status; also inform/mark what command's results are displayed...
-	unsafeMode   = pflag.Bool("unsafe-full-throttle", false, "enable mode in which command is executed immediately after any change")
+	unsafeMode   = pflag.Bool("unsafe-full-throttle", false, "enable mode in which pipeline is executed immediately after any change (without pressing Enter)")
 	outputScript = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
 	debugMode    = pflag.Bool("debug", false, "debug mode")
 	noColors     = pflag.Bool("no-colors", false, "disable interface colors")
-	shellFlag    = pflag.StringArrayP("exec", "e", nil, "`command` to pass $PIPELINE through; use multiple times to pass multi-word command; defaults to '-e=$SHELL -e=-c'")
-	initialCmd   = pflag.StringP("pipeline", "c", "", "initial command to use as $PIPELINE - editable later")
+	shellFlag    = pflag.StringArrayP("exec", "e", nil, "`command` to run pipeline with; repeat multiple times to pass multi-word command; defaults to '-e=$SHELL -e=-c'")
+	initialCmd   = pflag.StringP("pipeline", "c", "", "initial `commands` to use as pipeline (default empty)")
 	bufsize      = pflag.Int("buf", 40, "input buffer size & pipeline buffer sizes in `megabytes` (MiB)")
 )
 
