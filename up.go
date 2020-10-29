@@ -76,6 +76,7 @@ var (
 	outputScript = pflag.StringP("output-script", "o", "", "save the command to specified `file` if Ctrl-X is pressed (default: up<N>.sh)")
 	debugMode    = pflag.Bool("debug", false, "debug mode")
 	noColors     = pflag.Bool("no-colors", false, "disable interface colors")
+	shellFlag    = pflag.StringArrayP("exec", "e", nil, "`command` to pass $PIPELINE through; use multiple times to pass multi-word command; defaults to '-e=$SHELL -e=-c'")
 )
 
 func main() {
@@ -93,26 +94,28 @@ func main() {
 
 	// Find out what is the user's preferred login shell. This also allows user
 	// to choose the "engine" used for command execution.
-	log.Println("checking $SHELL...")
-	shell := os.Getenv("SHELL")
-	{
-		if shell != "" {
+	shell := *shellFlag
+	if len(shell) == 0 {
+		log.Println("checking $SHELL...")
+		sh := os.Getenv("SHELL")
+		if sh != "" {
 			goto shell_found
 		}
 		log.Println("checking bash...")
-		shell, _ = exec.LookPath("bash")
-		if shell != "" {
+		sh, _ = exec.LookPath("bash")
+		if sh != "" {
 			goto shell_found
 		}
 		log.Println("checking sh...")
-		shell, _ = exec.LookPath("sh")
-		if shell != "" {
+		sh, _ = exec.LookPath("sh")
+		if sh != "" {
 			goto shell_found
 		}
-		die("cannot find shell: $SHELL is empty, neither bash nor sh are in $PATH")
+		die("cannot find shell: no -e flag, $SHELL is empty, neither bash nor sh are in $PATH")
 	shell_found:
-		log.Println("found shell:", shell)
+		shell = []string{sh, "-c"}
 	}
+	log.Println("found shell:", shell)
 
 	// Initialize TUI infrastructure
 	tui := initTUI()
@@ -662,7 +665,7 @@ type Subprocess struct {
 	cancel context.CancelFunc
 }
 
-func StartSubprocess(shell, command string, stdin *Buf, notify func()) *Subprocess {
+func StartSubprocess(shell []string, command string, stdin *Buf, notify func()) *Subprocess {
 	ctx, cancel := context.WithCancel(context.TODO())
 	r, w := io.Pipe()
 	p := &Subprocess{
@@ -670,7 +673,7 @@ func StartSubprocess(shell, command string, stdin *Buf, notify func()) *Subproce
 		cancel: cancel,
 	}
 
-	cmd := exec.CommandContext(ctx, shell, "-c", command)
+	cmd := exec.CommandContext(ctx, shell[0], append(shell[1:], command)...)
 	cmd.Stdout = w
 	cmd.Stderr = w
 	cmd.Stdin = stdin.NewReader(true)
@@ -705,7 +708,7 @@ func getKey(ev *tcell.EventKey) key { return key(ev.Modifiers())<<16 + key(ev.Ke
 func altKey(base tcell.Key) key     { return key(tcell.ModAlt)<<16 + key(base) }
 func ctrlKey(base tcell.Key) key    { return key(tcell.ModCtrl)<<16 + key(base) }
 
-func writeScript(shell, command string, tui tcell.Screen) {
+func writeScript(shell []string, command string, tui tcell.Screen) {
 	os.Stderr.WriteString("up: Ultimate Plumber v" + version + " https://github.com/akavel/up\n")
 	var f *os.File
 	var err error
@@ -735,7 +738,8 @@ func writeScript(shell, command string, tui tcell.Screen) {
 	goto fallback_tmp
 
 try_file:
-	_, err = fmt.Fprintf(f, "#!%s\n%s\n", shell, command)
+	// NOTE: currently not supporting multi-word shell in upNNN.sh unfortunately :(
+	_, err = fmt.Fprintf(f, "#!%s\n%s\n", shell[0], command)
 	if err != nil {
 		goto fallback_tmp
 	}
