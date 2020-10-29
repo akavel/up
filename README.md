@@ -16,7 +16,7 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 
 ## Usage
 
-**[Download *up* for Linux](https://github.com/akavel/up/releases/download/v0.3.2/up)**
+**[Download *up* for Linux](https://github.com/akavel/up/releases/latest/download/up)**
 &nbsp; | &nbsp; [ArchLinux](https://wiki.archlinux.org/index.php/Arch_User_Repository): [`aur/up`](https://aur.archlinux.org/packages/up/)
 &nbsp; | &nbsp; FreeBSD: [`pkg install up`](https://www.freshports.org/textproc/up)
 &nbsp; | &nbsp; macOS: [`brew install up`](https://formulae.brew.sh/formula/up)
