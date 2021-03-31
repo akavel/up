@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"unicode"
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/terminfo"
@@ -97,7 +98,7 @@ If a plus '+' is visible in top-left corner, the internal buffer limit
 
 KEYS
 
-- alphanumeric & symbol keys, Left, Right, Ctrl-A/E/B/F/K/Y
+- alphanumeric & symbol keys, Left, Right, Ctrl-A/E/B/F/K/Y/W
                       - navigate and edit the pipeline command
 - Enter   - execute the pipeline command, updating the pipeline output panel
 - Up, Dn, PgUp, PgDn, Ctrl-Left, Ctrl-Right
@@ -419,6 +420,9 @@ func (e *Editor) HandleKey(ev *tcell.EventKey) bool {
 	case key(tcell.KeyCtrlY),
 		ctrlKey(tcell.KeyCtrlY):
 		e.insert(e.killspace...)
+	case key(tcell.KeyCtrlW),
+		ctrlKey(tcell.KeyCtrlW):
+		e.unixWordRubout()
 	default:
 		// Unknown key/combination, not handled
 		return false
@@ -448,6 +452,22 @@ func (e *Editor) kill() {
 		e.killspace = append(e.killspace[:0], e.value[e.cursor:]...)
 	}
 	e.value = e.value[:e.cursor]
+}
+
+// unixWordRubout removes the part of the word on the left of the cursor. A word is
+// delimited by whitespaces.
+// The term `unix-word-rubout` comes from `readline` (see `man 3 readline`)
+func (e *Editor) unixWordRubout() {
+	if e.cursor <= 0 {
+		return
+	}
+	pos := e.cursor - 1
+	for pos != 0 && (unicode.IsSpace(e.value[pos]) || !unicode.IsSpace(e.value[pos-1])) {
+		pos--
+	}
+	e.killspace = append(e.killspace[:0], e.value[pos:e.cursor]...)
+	e.value = append(e.value[:pos], e.value[e.cursor:]...)
+	e.cursor = pos
 }
 
 type BufView struct {
