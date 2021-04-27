@@ -25,7 +25,8 @@ by boosting any typical **Linux text-processing utils** such as `grep`, `sort`,
 To start using **up**, redirect any text-emitting command (or pipeline) into it
 — for example:
 
-    $ lshw |& ./up
+    wget https://github.com/akavel/up/releases/download/v0.3/up
+    lshw |& ./up
 
 then:
 
