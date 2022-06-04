@@ -38,7 +38,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const version = "0.4 (2020-10-29)"
+const version = "0.5-dev (2022-06-04)"
 
 // TODO: in case of error, show it in red (bg?), then below show again initial normal output (see also #4)
 // TODO: F1 should display help, and it should be multi-line, and scrolling licensing credits
@@ -115,6 +115,12 @@ OPTIONS
 `)
 		pflag.PrintDefaults()
 		fmt.Fprint(os.Stderr, `
+STYLE
+
+Colors can be configured through environment variables UP_BG1, UP_BG2 and
+UP_FG1, UP_FG2 for background and foreground. Valid values are 24-bit
+hexadecimal and Xterm color names.
+
 HOMEPAGE: https://github.com/akavel/up
 VERSION: `+version+`
 `)
@@ -172,6 +178,8 @@ func main() {
 		shell = []string{sh, "-c"}
 	}
 	log.Println("found shell:", shell)
+
+	var styles = getStyles()
 
 	stdin := io.Reader(os.Stdin)
 	if *noinput {
@@ -234,15 +242,15 @@ func main() {
 
 		// Draw UI
 		w, h := tui.Size()
-		style := whiteOnBlue
+		style := styles.activeCommand
 		if command == lastCommand {
-			style = whiteOnDBlue
+			style = styles.previousCommand
 		}
 		stdinCapture.DrawStatus(TuiRegion(tui, 0, 0, 1, 1), style)
 		commandEditor.DrawTo(TuiRegion(tui, 1, 0, w-1, 1), style,
 			func(x, y int) { tui.ShowCursor(x+1, 0) })
 		commandOutput.DrawTo(TuiRegion(tui, 0, 1, w, h-1))
-		drawText(TuiRegion(tui, 0, h-1, w, 1), whiteOnBlue, message)
+		drawText(TuiRegion(tui, 0, h-1, w, 1), styles.activeCommand, message)
 		tui.Show()
 
 		// Handle UI events
@@ -880,13 +888,38 @@ func TuiRegion(tui tcell.Screen, x, y, w, h int) Region {
 	}
 }
 
-var (
-	whiteOnBlue  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
-	whiteOnDBlue = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorNavy)
-)
-
 func drawText(region Region, style tcell.Style, text string) {
 	for x, ch := range text {
 		region.SetCell(x, 0, style, ch)
+	}
+}
+
+type UpStyles struct {
+	activeCommand,
+	previousCommand tcell.Style
+}
+
+func getEnv(key, fallback string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return fallback
+	}
+	return value
+}
+
+// Return Color for Xterm color name or hex string.
+func getColorEnv(key string, fallback string) tcell.Color {
+	value := getEnv(key, fallback)
+	return tcell.GetColor(value)
+}
+
+func getStyles () UpStyles {
+	return UpStyles {
+		activeCommand: tcell.StyleDefault.
+			Foreground(getColorEnv("UP_FG1", "white")).
+			Background(getColorEnv("UP_BG1", "blue")),
+		previousCommand: tcell.StyleDefault.
+			Foreground(getColorEnv("UP_FG2", "white")).
+			Background(getColorEnv("UP_BG2", "navy")),
 	}
 }
