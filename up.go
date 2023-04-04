@@ -208,7 +208,7 @@ func main() {
 		// Initially, no subprocess is running, as no command is entered yet
 		commandSubprocess *Subprocess = nil
 	)
-	// Intially, for user's convenience, show the raw input data, as if `cat` command was typed
+	// Initially, for user's convenience, show the raw input data, as if `cat` command was typed
 	commandOutput.Buf = stdinCapture
 
 	// Main loop
