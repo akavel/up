@@ -290,6 +290,12 @@ func main() {
 				tui.Fini()
 				writeScript(shell, commandEditor.String(), tui)
 				return
+			case key(tcell.KeyCtrlO),
+				ctrlKey(tcell.KeyCtrlO):
+				// Write only to stdout (i.e don't persist to file)
+				tui.Fini()
+				os.Stdout.WriteString(commandEditor.String())
+				return
 			}
 		}
 	}
